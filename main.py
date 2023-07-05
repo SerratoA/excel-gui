@@ -3,13 +3,17 @@ from tkinter import ttk
 from tkinter import messagebox
 import openpyxl
 
+#Need to check agaisnt empty rows/columns, currently breaks gui
+#Need to fix edit/save function, currently adds a new row instead of editing
+
 
 #Load data from Excel Sheet into Treeview
 def loadData(): 
     path = "people.xlsx"
     workbook = openpyxl.load_workbook(path)
     sheet = workbook.active
-
+    treeview.delete(*treeview.get_children())
+    
     list_values = list(sheet.values)
     print(list_values)
 
@@ -23,18 +27,36 @@ def loadData():
 def insertRow():
     #Get values from entry widgets
     name = name_entry.get()
-    age = int(age_entry.get())
+    age = age_entry.get()
     status = status_combobox.get()
     employment = "Employed" if a.get() else "Unemployed"
 
+# Check if name or age is empty
+    if name == "":
+        messagebox.showerror("Error", "Name field cannot be empty.")
+        return
+    if age == "":
+        messagebox.showerror("Error", "Age field cannot be empty.")
+        return
 
-    #Insert row into Excel Sheet
-    path = "people.xlsx"
-    workbook = openpyxl.load_workbook(path)
-    sheet = workbook.active
-    row_values = [name, age, status, employment]
-    sheet.append(row_values)
-    workbook.save(path)
+    # Check if age is a valid integer
+    try:
+        age = int(age)
+    except ValueError:
+        messagebox.showerror("Error", "Age must be a valid integer.")
+        return
+
+    # Insert row into Excel Sheet
+    try:
+        path = "people.xlsx"
+        workbook = openpyxl.load_workbook(path)
+        sheet = workbook.active
+        row_values = [name, age, status, employment]
+        sheet.append(row_values)
+        workbook.save(path)
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
+        return
 
 
     #Insert row into Treeview
@@ -83,7 +105,7 @@ def editRow():
             # Open a new window for editing the row
         edit_window = tk.Toplevel(root)
         edit_window.title("Edit Row")
-            
+        row_index = int(treeview.index(selected_item))
             # Create labels and entry widgets for editing the row
         labels = ["Name", "Age", "Subscription", "Employment"]
         entries = []
@@ -98,25 +120,30 @@ def editRow():
             def saveChanges():
                 new_values = [entry.get() for entry in entries]
                 
-                path = "people.xlsx"
-                workbook = openpyxl.load_workbook(path)
-                sheet = workbook.active
+                try:
+                    path = "people.xlsx"
+                    workbook = openpyxl.load_workbook(path)
+                    sheet = workbook.active
 
-                # Get the row index of the selected item
-                row_index = int(selected_item[1:]) - 1
+                    # Delete the old row
+                    sheet.delete_rows(row_index + 2)
 
-                # Update the cell values in the Excel sheet
-                for col_index, value in enumerate(new_values):
-                    sheet.cell(row=row_index + 2, column=col_index + 1).value = value
+                    # Insert the updated row at the same position
+                    sheet.insert_rows(row_index + 2)
+                    for col_index, value in enumerate(new_values):
+                        print(col_index)
+                        sheet.cell(row=row_index + 2, column=col_index+1).value = value
 
-                workbook.save(path)
-                
-                # Update the row in Treeview
-                treeview.item(selected_item, values=new_values)
-                
-                edit_window.destroy()  # Close the edit window
-                 # Add edit entry to history log
-                addHistoryEntry("Edited row: " + str(item_values) + " -> " + str(new_values))
+                    workbook.save(path)
+
+                    # Update the row in Treeview
+                    treeview.item(selected_item, values=new_values)
+
+                    edit_window.destroy()  # Close the edit window
+                    # Add edit entry to history log
+                    addHistoryEntry("Edited row: " + str(item_values) + " -> " + str(new_values))
+                except Exception as e:
+                    print(e)
             
             ttk.Button(edit_window, text="Save", command=saveChanges).grid(row=len(labels), column=0, columnspan=2, padx=5, pady=10)
             
@@ -265,4 +292,5 @@ treeview.pack()
 treescroll.config(command=treeview.yview)
 loadData()
 
+#Run GUI
 root.mainloop()
