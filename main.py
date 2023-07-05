@@ -1,11 +1,23 @@
 import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox
+from tkinter import ttk, messagebox, simpledialog
 import openpyxl
+import datetime
 
 #Need to check agaisnt empty rows/columns, currently breaks gui
 #Need to fix edit/save function, currently adds a new row instead of editing
 #bug where copied row for checkbutton does not lead to correct value
+
+#Create log file
+log_file = "history_log.txt" 
+username = ""  # Global variable to store the username
+
+def getUsername():
+    global username
+    username = simpledialog.askstring("Username", "Please enter your username:")
+    if username:
+        root.title(f"Data Management App - User: {username}")
+    else:
+        root.destroy()
 
 
 #Load data from Excel Sheet into Treeview
@@ -235,42 +247,32 @@ def copyRow():
         messagebox.showinfo("No Row Selected", "Please select a row to copy.")
 
 def addHistoryEntry(entry):
-    history_log.insert(tk.END, entry + '\n')
-    history_log.see(tk.END)
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_entry = f"{timestamp} - {username}: {entry}\n"
+
+    with open(log_file, "a") as file:
+        file.write(log_entry)
         
 # Function to open the log window
 #maybe write to a file instead of a text box??
 def openLogWindow():
-    global log_window
-    # If the log window is already open, don't open another one
-    if log_window is not None:
-        log_window.destroy()  # Close the existing log window
-
     log_window = tk.Toplevel(root)
     log_window.title("History Logs")
-    log_window.geometry("400x300")
+    log_window.geometry("600x400")
 
     # Create a Text widget in the log window to display the history logs
-    log_text = tk.Text(log_window, height=15, width=40)
+    log_text = tk.Text(log_window, height=35, width=50)
     log_text.pack()
 
-    # Function to populate the log window with the history logs
-    def populateLogs():
-        logs = history_log.get("1.0", tk.END)
+    # Open the log file and populate the Text widget with its contents
+    with open(log_file, "r") as file:
+        logs = file.read()
         log_text.insert(tk.END, logs)
-    populateLogs()
 
-    # Reset log_window variable when the log window is closed
-    def onLogWindowClose():
-        global log_window
-        log_window.destroy()
-        log_window = None
-
-    # Set the protocol handler for the log window to call onLogWindowClose() when the window is closed
-    log_window.protocol("WM_DELETE_WINDOW", onLogWindowClose)
         
 root = tk.Tk()
 log_window = None
+getUsername()
 
 # Set the window size and position
 
