@@ -5,6 +5,7 @@ import openpyxl
 
 #Need to check agaisnt empty rows/columns, currently breaks gui
 #Need to fix edit/save function, currently adds a new row instead of editing
+#bug where copied row for checkbutton does not lead to correct value
 
 
 #Load data from Excel Sheet into Treeview
@@ -131,7 +132,7 @@ def editRow():
                     # Insert the updated row at the same position
                     sheet.insert_rows(row_index + 2)
                     for col_index, value in enumerate(new_values):
-                        print(col_index)
+                        #print(col_index)
                         sheet.cell(row=row_index + 2, column=col_index+1).value = value
 
                     workbook.save(path)
@@ -163,8 +164,10 @@ def copyRow():
             status_combobox.set(item_values[2])
             if item_values[3] == "Employed":
                 checkbutton.state(["selected"])
-            else:
+                a.set(1)
+            else:       
                 checkbutton.state(["!selected"])
+                a.set(0)
         else:
             messagebox.showinfo("No Row Selected", "Please select a row to copy.")
     else:
