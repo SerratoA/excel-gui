@@ -23,6 +23,67 @@ def loadData():
 
     for row in list_values[1:]:
         treeview.insert("", "end", values=row)
+        
+        
+def showSearchResults(results):
+    search_window = tk.Toplevel(root)
+    search_window.title("Search Results")
+
+    # Create a Treeview in the search window to display the results
+    search_treeview = ttk.Treeview(search_window)
+    search_treeview.pack()
+
+    # Configure the Treeview columns
+    columns = ["Name", "Age", "Subscription", "Employment"]
+    search_treeview["columns"] = columns
+    search_treeview["show"] = "headings"
+    for col in columns:
+        search_treeview.heading(col, text=col)
+        search_treeview.column(col, width=100)
+
+    # Insert the search results into the Treeview
+    for result in results:
+        search_treeview.insert("", "end", values=result)
+
+    def copySelectedRow():
+        selected_item = search_treeview.focus()
+        if selected_item:
+            item_values = search_treeview.item(selected_item, "values")
+            if item_values:
+                name_entry.delete(0, "end")
+                name_entry.insert(0, item_values[0])
+                age_entry.delete(0, "end")
+                age_entry.insert(0, item_values[1])
+                status_combobox.set(item_values[2])
+                if item_values[3] == "Employed":
+                    checkbutton.state(["selected"])
+                    a.set(1)
+                else:
+                    checkbutton.state(["!selected"])
+                    a.set(0)
+
+
+    # Add a "Copy" button
+    copy_button = ttk.Button(search_window, text="Copy", command=copySelectedRow)
+    copy_button.pack()
+
+
+def searchData():
+    search_text = search_entry.get()  # Get the search text from an entry widget
+
+    # Collect the search results
+    results = []
+    for item_id in treeview.get_children():
+        item_values = treeview.item(item_id)['values']
+        if search_text.lower() in [str(value).lower() for value in item_values]:
+            results.append(item_values)
+
+    # Show the search results in a pop-up window
+    if results:
+        showSearchResults(results)
+    else:
+        messagebox.showinfo("No Results", "No matching results found.")
+
 
 #Insert row into Excel Sheet and Treeview and clear entry widgets
 def insertRow():
@@ -211,6 +272,10 @@ def openLogWindow():
 root = tk.Tk()
 log_window = None
 
+# Set the window size and position
+
+
+
 #Style for Tkinter
 root.tk.call('source', 'forest-dark.tcl')
 ttk.Style().theme_use('forest-dark')
@@ -245,7 +310,7 @@ status_combobox.grid(column=0, row=2, padx = 5, pady = 5, sticky='ew')
 #Employment checkbutton widget
 a = tk.BooleanVar()
 checkbutton = ttk.Checkbutton(widgets_entry, text='Employment', variable=a)
-checkbutton.grid(column=0, row=3, padx = 5, pady = 5,  sticky='nsew')
+checkbutton.grid(column=0, row=3, padx = 5, pady = 5,  sticky='ew')
 
 #Insert button widget
 insert_button = ttk.Button(widgets_entry, text='Insert', command = insertRow)
@@ -269,20 +334,28 @@ check_logs_button.grid(column=1, row=2, padx=5, pady=5)
 
 # Create a Text widget for history log
 history_log = tk.Text(frame, height=10, width=50)
-history_log.grid(column=0, row=6, columnspan=2, padx=20, pady=10)
+history_log.grid(column=0, row=6, columnspan=2, padx=20, pady=10, sticky="nsew")
 
 #Separator
-#separator = ttk.Separator(frame, orient='horizontal')
-#separator.grid(column=0, row=5, padx=20, pady=10, sticky='nsew')
+separator = ttk.Separator(widgets_entry, orient='horizontal')
+separator.grid(column=0, row=8, padx=10, pady=15, sticky='nsew')
+
+# Search button widget
+search_button = ttk.Button(widgets_entry, text='Search', command=searchData)
+search_button.grid(column=0, row=10, padx=5, pady=5, sticky='ew')
+
+# Search entry widget
+search_entry = ttk.Entry(widgets_entry, width=20)
+search_entry.grid(column=0, row=9, padx=5, pady=5, sticky='ew')
+
 
 #Frame for Treeview on right side of GUI
 tree_frame = ttk.LabelFrame(frame, text='Data Tree')
-tree_frame.grid(column=1, row=0, pady=10, sticky='nsew')
+tree_frame.grid(column=1, row=0, padx= 10, pady=10, sticky='nsew')
 
 #Scrollbar
 treescroll = ttk.Scrollbar(tree_frame)
 treescroll.pack(side='right', fill='y')
-
 
 #Treeview 
 cols = ("Name", "Age", "Subscription", "Employment")
