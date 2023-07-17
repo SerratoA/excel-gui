@@ -2,40 +2,48 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import openpyxl
 import datetime
+import csv
 
-#Need to check agaisnt empty rows/columns, currently breaks gui
-#Need to fix edit/save function, currently adds a new row instead of editing
-#bug where copied row for checkbutton does not lead to correct value
+
+#Need to add
+#Flag for delete
+#Multiple row selection for delete and edit
+#undo and redo?
+#Real time changes 
+
 
 #Create log file
 log_file = "history_log.txt" 
 username = ""  # Global variable to store the username
 
+
 def getUsername():
     global username
     username = simpledialog.askstring("Username", "Please enter your username:")
     if username:
-        root.title(f"Data Management App - User: {username}")
+        root.title("Data Management App - User: " + username)
     else:
         root.destroy()
 
 
 #Load data from Excel Sheet into Treeview
-def loadData(): 
-    path = "people.xlsx"
-    workbook = openpyxl.load_workbook(path)
-    sheet = workbook.active
-    treeview.delete(*treeview.get_children())
-    
-    list_values = list(sheet.values)
-    print(list_values)
-
-    for name in list_values[0]:
-        treeview.heading(name, text=name)
-
-    for row in list_values[1:]:
-        treeview.insert("", "end", values=row)
+def loadData():
+    path = "data.csv"
+    with open(path, "r") as file:
+        reader = csv.reader(file)
+        header = next(reader)  # Read the header row
         
+        treeview.delete(*treeview.get_children())
+        
+        # Configure the Treeview columns
+        treeview["columns"] = header
+        for col in header:
+            treeview.heading(col, text=col)
+            treeview.column(col, width=100)
+        
+        # Insert the data rows into the Treeview
+        for row in reader:
+            treeview.insert("", "end", values=row)
         
 def showSearchResults(results):
     search_window = tk.Toplevel(root)
@@ -128,6 +136,7 @@ def insertRow():
         row_values = [name, age, status, employment]
         sheet.append(row_values)
         workbook.save(path)
+
     except Exception as e:
         messagebox.showerror("Error", str(e))
         return
@@ -171,7 +180,6 @@ def deleteRow():
 
 
 # Edit selected row in Excel Sheet and Treeview
-#Not working for last few rows, instead of editing it adds a new row, need to fix
 def editRow():
     selected_item = treeview.focus()
     if selected_item:
@@ -269,12 +277,12 @@ def openLogWindow():
         logs = file.read()
         log_text.insert(tk.END, logs)
 
-        
+
+
+#GUI Setup
 root = tk.Tk()
 log_window = None
 getUsername()
-
-# Set the window size and position
 
 
 
@@ -283,7 +291,6 @@ root.tk.call('source', 'forest-dark.tcl')
 ttk.Style().theme_use('forest-dark')
 
 #Title and Frame
-root.title('Config Excel GUI')
 frame = ttk.Frame(root, cursor = 'arrow')
 frame.pack()
 
@@ -355,20 +362,91 @@ search_entry.grid(column=0, row=9, padx=5, pady=5, sticky='ew')
 tree_frame = ttk.LabelFrame(frame, text='Data Tree')
 tree_frame.grid(column=1, row=0, padx= 10, pady=10, sticky='nsew')
 
-#Scrollbar
-treescroll = ttk.Scrollbar(tree_frame)
-treescroll.pack(side='right', fill='y')
+# Scrollbar
+tree_scroll_x = ttk.Scrollbar(tree_frame, orient="horizontal")
+tree_scroll_y = ttk.Scrollbar(tree_frame)
 
-#Treeview 
-cols = ("Name", "Age", "Subscription", "Employment")
-treeview = ttk.Treeview(tree_frame, columns=cols, show='headings', height=35, yscrollcommand=treescroll.set)
-treeview.column("Name", width=100)
-treeview.column("Age", width = 50)
-treeview.column("Subscription", width = 100)
-treeview.column("Employment", width = 100)
+tree_scroll_x.pack(side="bottom", fill="x")
+tree_scroll_y.pack(side="right", fill="y")
+
+# Canvas for horizontal scrollbar
+tree_canvas = tk.Canvas(tree_frame, bd=0, xscrollcommand=tree_scroll_x.set)
+tree_canvas.pack(side="left", fill="both", expand=True)
+
+tree_scroll_x.config(command=tree_canvas.xview)
+tree_scroll_y.config(command=tree_canvas.yview)
+
+# Treeview
+cols = (
+    "Custodian",
+    "src_Destination_Table",
+    "Source_File",
+    "Date_Format",
+    "Header_Delimiter",
+    "Date_Position_OR_Column",
+    "Additional_Delimiter",
+    "File_Type",
+    "XLS_to_CSV",
+    "XLS_Sheet_Name",
+    "Number_Of_Quarters",
+    "Unzip_File",
+    "Zip_File_Name",
+    "Filter_File_Name",
+    "Combine_Files",
+    "Remove_Header_Trailer",
+    "Num_Header_Lines",
+    "Num_Trailer_Lines",
+    "Start_String",
+    "Additional_EOL",
+    "Remove_Additional_EOL",
+    "Add_Record_ID",
+    "First_Record_Identifier",
+    "Flatten_File",
+    "Add_Sequence",
+    "Fill_With_Blank_Lines",
+    "Strip_Leading_Characters",
+    "Sequence",
+    "Delimit_Fixed_Width",
+    "Config_File",
+    "Delimiter",
+    "Filter_Records",
+    "Inverted_Filter",
+    "Column_Number",
+    "Filter_Value",
+    "JSON_Scrapping_Needed",
+    "JSON_KeyName",
+    "Add_Column_Delimiter",
+    "New_Column_Date",
+    "New_Column_Index",
+    "New_Column_Count",
+    "Escape_Quotes",
+    "Insert_File_Control",
+    "File_Label",
+    "Server",
+    "Delete_Source_File",
+    "Snowflake_Account",
+    "Snowflake_Authenticator",
+    "Snowflake_Warehouse",
+    "Snowflake_Database",
+    "Snowflake_Schema",
+    "Snowflake_FileFormat",
+    "Stored_Procedure",
+    "Complexity",
+    "Priority",
+    "Notes",
+)
+treeview = ttk.Treeview(tree_canvas, columns=cols, show="headings", height=35, yscrollcommand=tree_scroll_y.set)
+
 treeview.pack()
-treescroll.config(command=treeview.yview)
+
+# Configure column widths
+for col in cols:
+    treeview.column(col, width=100)
+
+tree_scroll_y.config(command=treeview.yview)
+
+# Load data into Treeview
 loadData()
 
-#Run GUI
+# Run GUI
 root.mainloop()
