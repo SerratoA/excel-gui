@@ -1,0 +1,25 @@
+Custodian,src_Destination_Table,Source_File,Date_Format,Header_Delimiter,Date_Position_OR_Column,Additional_Delimiter,File_Type,XLS_to_CSV,XLS_Sheet_Name,Number_Of_Quarters,Unzip_File,test,test1,test2,test3
+,The destination table in src Schema,The name of the source file without the dates. i.e. IWS_POSITD,The format of the date in the header row of the source file,"The delimiter of the header row of the file. If the column is blank, it is assumed the header is fixed width.","Depending on the file being delimited or fixed width, column number or character starting position of the date string.","Optional for files containing multiple delimiters. i.e. ',' and '|'.","The type of file. Pipe Delimited, Comma Delimited, Fixed Width, JSON",Some files are .xls and need to be converted to .csv,"If a file needs to be converted from XLS to CSV and a specific sheet needs to be extracted, list the sheet name here. If there is only one sheet, it can be left blank.","Only if File_Type = SQL. Number of quarters to download data from SQL. If it's 0, it will select all records. The code assumes the column name for the quarter is ""Quarter"".",Run the script to Unzip files
+IWS,IWS_POSITION_IMP,IWS_POSITD_SINGLE.*,MMDDYY,,63,,Fixed_Width,FALSE,,,FALSE
+IWS,IWS_ACCOUNTBALANCE_IMP,IWS_ACCTBALD_SINGLE.*,MMDDYY,,42,,Fixed_Width,FALSE,,,FALSE
+IWS,IWS_SECURITY_IMP,IWS_SECMAST_SINGLE.*,MMDDYY,,7,,Fixed_Width,FALSE,,,FALSE
+IWS,IWS_GNUMS_IMP,IWS_GNUMS_SINGLE.*,MM/DD/YYYY,,13,,Fixed_Width,FALSE,,,FALSE
+IWS,IWS_ACCOUNTUPD_IMP,IWS_NAMADRD_SINGLE.*,MMDDYYYY,,63,,Fixed_Width,FALSE,,,FALSE
+IWS,IWS_ACCOUNT_IMP,IWS_NAMADRF_SINGLE.*,MMDDYYYY,,63,,Fixed_Width,FALSE,,,FALSE
+IWS,IWS_TRANSACTION_IMP,IWS_ACTYD_SINGLE.*,MMDDYY,,63,,Fixed_Width,FALSE,,,FALSE
+IWS,IWS_ASSET_FEE_MIN_IMP,IWS_Asset_Fee_Min_\d+\.xls,,,,,CSV,TRUE,,,FALSE
+IWS,IWS_ASSET_FEE_MIN_OVERRIDE_IMP,IWS_Asset_Fee_Min_\d+_Override\D*,,,,,CSV,FALSE,,,FALSE
+IWS,IWS_ASSET_FEE_MIN_EXCLUSION_IMP,IWS_Asset_Fee_Min_\d+_Exclusion\D*,,,,,CSV,FALSE,,,FALSE
+IWS,IWS_COMMISSION_RECREATION_IMP,IWS_Comm_Rec_Linear_\d+\.csv,,,,,CSV,FALSE,,,FALSE
+IWS,IWS_COMMISSION_RECREATION_OVERRIDE_IMP,IWS_Comm_Rec_Linear_Override.*,,,,,CSV,FALSE,,,FALSE
+IWS,COGS_MUTUAL_FUND_DIRECTORY_IMP,Fidelity_Template.*,,,,,CSV,TRUE,,,FALSE
+SWB,SWB_FEES_ABP_IMP,SWB_Fees_ABP_\d+\.csv,,,,,CSV,FALSE,,,FALSE
+SWB,SWB_FEES_ABP_OVERRIDE_IMP,SWB_Fees_ABP_\d+_Override.*,,,,,CSV,FALSE,,,FALSE
+SWB,SWB_FEES_TBP_IMP,SWB_Fees_TBP_\d+\.csv,,,,,CSV,FALSE,,,FALSE
+SWB,SWB_FEES_TBP_OVERRIDE_IMP,SWB_Fees_TBP_\d+_Override.*,,,,,CSV,FALSE,,,FALSE
+SWB,SWB_POSITIONSEC_IMP,SWB_CRS.RPS.*,YYYYMMDD,|,5,,Pipe_Delimited,FALSE,,,FALSE
+SWB,SWB_POSITIONCBR_IMP,SWB_CRS.RPS.*,YYYYMMDD,|,5,,Pipe_Delimited,FALSE,,,FALSE
+SWB,SWB_REPCODE_WRAP_BILL_TYPE_IMP,Schwab_Wrap_Non_Wrap_Report.*,,,,,CSV,TRUE,Data,,FALSE
+SWB,SWB_TRANSACTION_IMP,SWB_CRS.TRN.*,YYYYMMDD,|,5,,Pipe_Delimited,FALSE,,,FALSE
+SWB,SWB_ACCOUNT_IMP,SWB_CRS.ACC.*,YYYYMMDD,|,5,,Pipe_Delimited,FALSE,,,FALSE
+SWB,SWB_SECURITY_IMP,SWB_CRS.SEC.*,YYYYMMDD,|,5,,Pipe_Delimited,FALSE,,,FALSE

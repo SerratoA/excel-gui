@@ -1,8 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
-import openpyxl
 import datetime
 import csv
+import openpyxl
+import pandas as pd
 
 
 #Need to add
@@ -15,7 +16,25 @@ import csv
 #Create log file
 log_file = "history_log.txt" 
 username = ""  # Global variable to store the username
+path = "data.xlsx"
 
+def convertCSVtoExcel(csv_path, excel_path):
+    # Read the CSV file into a pandas DataFrame
+    df = pd.read_csv(csv_path)
+
+    # Write the DataFrame to an Excel file
+    df.to_excel(excel_path, index=False)
+
+csv_path = "data.csv"
+excel_path = "data.xlsx"
+
+
+def convertExceltoCSV(excel_path, csv_path):
+    # Read the Excel file into a pandas DataFrame
+    df = pd.read_excel(excel_path)
+
+    # Write the DataFrame to a CSV file
+    df.to_csv(csv_path, index=False)
 
 def getUsername():
     global username
@@ -28,22 +47,17 @@ def getUsername():
 
 #Load data from Excel Sheet into Treeview
 def loadData():
-    path = "data.csv"
-    with open(path, "r") as file:
-        reader = csv.reader(file)
-        header = next(reader)  # Read the header row
+    workbook = openpyxl.load_workbook(path)
+    sheet = workbook.active
+
+    treeview.delete(*treeview.get_children())
+    
+    list_values = list(sheet.values)
+    print(list_values)
         
-        treeview.delete(*treeview.get_children())
-        
-        # Configure the Treeview columns
-        treeview["columns"] = header
-        for col in header:
-            treeview.heading(col, text=col)
-            treeview.column(col, width=100)
-        
-        # Insert the data rows into the Treeview
-        for row in reader:
-            treeview.insert("", "end", values=row)
+    # Insert the data rows into the Treeview
+    for row in list_values[1:]:
+        treeview.insert("", "end", values=row)
         
 def showSearchResults(results):
     search_window = tk.Toplevel(root)
@@ -87,9 +101,21 @@ def showSearchResults(results):
     copy_button = ttk.Button(search_window, text="Copy", command=copySelectedRow)
     copy_button.pack()
 
+def performSearch():
+    search_window = tk.Toplevel(root)
+    search_window.title("Search")
+    
+    search_label = ttk.Label(search_window, text="Enter search query:")
+    search_label.pack()
+    
+    search_entry = ttk.Entry(search_window)
+    search_entry.pack()
+    
+    search_button = ttk.Button(search_window, text="Search", command=lambda: searchData(search_entry.get()))
+    search_button.pack()
 
-def searchData():
-    search_text = search_entry.get()  # Get the search text from an entry widget
+def searchData(x):
+    search_text = x  # Get the search text from an entry widget
 
     # Collect the search results
     results = []
@@ -103,6 +129,8 @@ def searchData():
         showSearchResults(results)
     else:
         messagebox.showinfo("No Results", "No matching results found.")
+
+
 
 
 #Insert row into Excel Sheet and Treeview and clear entry widgets
@@ -130,7 +158,6 @@ def insertRow():
 
     # Insert row into Excel Sheet
     try:
-        path = "people.xlsx"
         workbook = openpyxl.load_workbook(path)
         sheet = workbook.active
         row_values = [name, age, status, employment]
@@ -164,7 +191,7 @@ def deleteRow():
             item_values = treeview.item(selected_item, "values")
             if item_values:
             # Delete row from Excel Sheet
-                path = "people.xlsx"
+
                 workbook = openpyxl.load_workbook(path)
                 sheet = workbook.active
                 row_index = int(treeview.index(selected_item))
@@ -174,6 +201,7 @@ def deleteRow():
 
                 # Delete row from Treeview
                 treeview.delete(selected_item)
+                addHistoryEntry("Deleted row: " + str(treeview.item(selected_item)['values']))
 
     else:
         messagebox.showinfo("No Row Selected", "Please select a row to delete.")
@@ -189,7 +217,7 @@ def editRow():
         edit_window.title("Edit Row")
         row_index = int(treeview.index(selected_item))
             # Create labels and entry widgets for editing the row
-        labels = ["Name", "Age", "Subscription", "Employment"]
+        labels = cols
         entries = []
         for i, label in enumerate(labels):
             ttk.Label(edit_window, text=label).grid(row=i, column=0, padx=5, pady=5, sticky="e")
@@ -201,9 +229,7 @@ def editRow():
             # Save button to update the row in Excel Sheet and Treeview
             def saveChanges():
                 new_values = [entry.get() for entry in entries]
-                
                 try:
-                    path = "people.xlsx"
                     workbook = openpyxl.load_workbook(path)
                     sheet = workbook.active
 
@@ -269,7 +295,7 @@ def openLogWindow():
     log_window.geometry("600x400")
 
     # Create a Text widget in the log window to display the history logs
-    log_text = tk.Text(log_window, height=35, width=50)
+    log_text = tk.Text(log_window, height=35, width=90)
     log_text.pack()
 
     # Open the log file and populate the Text widget with its contents
@@ -277,13 +303,35 @@ def openLogWindow():
         logs = file.read()
         log_text.insert(tk.END, logs)
 
+def exitApp():
+    root.quit()
+
 
 
 #GUI Setup
 root = tk.Tk()
+root.geometry("1600x800")
 log_window = None
 getUsername()
 
+
+menubar = tk.Menu(root)
+root.config(menu=menubar)
+
+gui_menu = tk.Menu(menubar, tearoff=False)
+history_menu = tk.Menu(menubar, tearoff=False)
+
+menubar.add_cascade(label="Menu", menu=gui_menu)
+menubar.add_cascade(label = "History", menu = history_menu)
+
+# Add search option to the search menu
+gui_menu.add_command(label="Search", command=performSearch)
+#separator
+gui_menu.add_separator()
+
+gui_menu.add_command(label="Exit", command=exitApp)
+
+history_menu.add_command(label="View History", command=openLogWindow)
 
 
 #Style for Tkinter
@@ -296,71 +344,141 @@ frame.pack()
 
 #Widgets on left side of GUI
 widgets_entry = ttk.LabelFrame(frame, text='Insert Data Row')
-widgets_entry.grid(column=0, row=0, sticky='nsew', padx=20, pady=10)
+widgets_entry.grid(column=0, row=0, sticky='nsew', padx=10, pady=10)
 
-#Name entry widget
-name_entry = ttk.Entry(widgets_entry, width=20)
-name_entry.insert(0, 'Name')
-name_entry.bind('<FocusIn>', lambda event: name_entry.delete(0, 'end'))
-name_entry.grid(column=0, row=0, padx = 5, pady = 5, sticky='ew')
+def create_entry_widget(parent, row, column, width, default_text):
+    entry = ttk.Entry(parent, width=width)
+    entry.insert(0, default_text)
+    entry.bind('<FocusIn>', lambda event: entry.delete(0, 'end'))
+    entry.grid(column=column, row=row, padx=5, pady=5, sticky='ew')
+    return entry
 
-#Age entry widget
-age_entry = ttk.Spinbox(widgets_entry, from_=1, to=100, width=5)
-age_entry.insert(0, 'Age')
-age_entry.bind('<FocusIn>', lambda event: age_entry.delete(0, 'end'))
-age_entry.grid(column=0, row=1,padx = 5, pady = 5, sticky='ew')
+# Function to create and configure a checkbutton widget
+def create_checkbutton_widget(parent, row, column, text, variable):
+    checkbutton = ttk.Checkbutton(parent, text=text, variable=variable, onvalue=True, offvalue=False)
+    checkbutton.grid(column=column, row=row, padx=5, pady=5, sticky='ew')
+    return checkbutton
 
-#Status combobox widget
-status_list = ['Active', 'Inactive']
-status_combobox = ttk.Combobox(widgets_entry, values = status_list, state='readonly')
-status_combobox.current(0)
-status_combobox.grid(column=0, row=2, padx = 5, pady = 5, sticky='ew')
+# Function to create and configure a spinbox widget
+def create_spinbox_widget(parent, row, column, from_, to, width, default_text):
+    spinbox = ttk.Spinbox(parent, from_=from_, to=to, width=width)
+    spinbox.insert(0, default_text)
+    spinbox.bind('<FocusIn>', lambda event: spinbox.delete(0, 'end'))
+    spinbox.grid(column=column, row=row, padx=5, pady=5, sticky='ew')
+    return spinbox
 
-#Employment checkbutton widget
-a = tk.BooleanVar()
-checkbutton = ttk.Checkbutton(widgets_entry, text='Employment', variable=a)
-checkbutton.grid(column=0, row=3, padx = 5, pady = 5,  sticky='ew')
+# Function to create and configure a combobox widget
+def create_combobox_widget(parent, row, column, values, width, default_index):
+    combobox = ttk.Combobox(parent, values=values, state='readonly', width=width)
+    combobox.current(default_index)
+    combobox.grid(column=column, row=row, padx=5, pady=5, sticky='ew')
+    return combobox
+
+# Create entry widgets
+custodian_entry = create_entry_widget(widgets_entry, 0, 0, 5, 'Enter Custodian')
+source_dest_entry = create_entry_widget(widgets_entry, 1, 0, 5, 'Enter Source Destination')
+source_file_entry = create_entry_widget(widgets_entry, 2, 0, 5, 'Enter Source File')
+date_format_entry = create_entry_widget(widgets_entry, 3, 0, 5, 'Enter Date Format')
+header_delimiter_entry = create_entry_widget(widgets_entry, 4, 0, 5, 'Enter Header Delimiter')
+additional_delimiter_entry = create_entry_widget(widgets_entry, 6, 0, 5, 'Enter Additional Header Delimiter')
+xls_sheet_name_entry = create_entry_widget(widgets_entry, 9, 0, 5, 'Enter XLS Sheet Name')
+zip_file_name_entry = create_entry_widget(widgets_entry, 12, 0, 5, 'Enter Zip File Name')
+filter_file_name_entry = create_entry_widget(widgets_entry, 13, 0, 5, 'Enter Filter File Name')
+start_string_entry = create_entry_widget(widgets_entry, 1, 1, 5, 'Enter Start String')
+first_record_identifier_entry = create_entry_widget(widgets_entry, 5, 1, 5, 'Enter First Record Identifier')
+strip_leading_characters_entry = create_entry_widget(widgets_entry, 9, 1, 5, 'Enter Strip Leading Characters')
+sequence_entry = create_entry_widget(widgets_entry, 10, 1, 5, 'Enter Sequence')
+newColumnDate_entry = create_entry_widget(widgets_entry, 4, 2, 5, 'New Column Date')
+newColumnIndex_entry = create_entry_widget(widgets_entry, 5, 2, 5, 'New Column Index')
+newColumnCount_entry = create_entry_widget(widgets_entry, 6, 2, 5, 'New Column Count')
+fileLabel_entry = create_entry_widget(widgets_entry, 9, 2, 5, 'File Label')
+server_entry = create_entry_widget(widgets_entry, 10, 2, 5, 'Server')
+config_file_entry = create_entry_widget(widgets_entry, 12, 1, 5, 'Enter Config File')
+delimiter_entry = create_entry_widget(widgets_entry, 13, 1, 5, 'Enter Delimiter')
+filter_value_entry = create_entry_widget(widgets_entry, 0, 2, 5, 'Enter Filter Value')
+json_key_name_entry = create_entry_widget(widgets_entry, 2, 2, 5, 'Enter JSON KeyName')
+snowflakeAccount_entry = create_entry_widget(widgets_entry, 12, 2, 5, 'Snowflake Account')
+snowflakeAuthenticator_entry = create_entry_widget(widgets_entry, 13, 2, 5, 'Snowflake Authenticator')
+snowflakeWarehouse_entry = create_entry_widget(widgets_entry, 14, 2, 5, 'Snowflake Warehouse')
+snowflakeDatabase_entry = create_entry_widget(widgets_entry, 15, 2, 5, 'Snowflake Database')
+snowflakeSchema_entry = create_entry_widget(widgets_entry, 16, 2, 5, 'Snowflake Schema')
+snowflakeFileFormat_entry = create_entry_widget(widgets_entry, 0, 3, 5, 'Snowflake FileFormat')
+storedProcedure_entry = create_entry_widget(widgets_entry, 1, 3, 5, 'Stored Procedure')
+priority_entry = create_entry_widget(widgets_entry, 3, 3, 5, 'Priority')
+notes_entry = create_entry_widget(widgets_entry, 4, 3, 5, 'Notes')
+
+# Create checkbutton widgets
+xls_to_csv_var = tk.BooleanVar()
+xls_to_csv_checkbutton = create_checkbutton_widget(widgets_entry, 8, 0, 'Convert XLS to CSV', xls_to_csv_var)
+unzip_file_var = tk.BooleanVar()
+unzip_file_checkbutton = create_checkbutton_widget(widgets_entry, 11, 0, 'Unzip File', unzip_file_var)
+combine_files_var = tk.BooleanVar()
+combine_files_checkbutton = create_checkbutton_widget(widgets_entry, 14, 0, 'Combine Files', combine_files_var)
+remove_header_trailer_var = tk.BooleanVar()
+remove_header_trailer_checkbutton = create_checkbutton_widget(widgets_entry, 15, 0, 'Remove Header and Trailer', remove_header_trailer_var)
+additional_eol_var = tk.BooleanVar()
+additional_eol_checkbutton = create_checkbutton_widget(widgets_entry, 2, 1, 'Additional EOL', additional_eol_var)
+remove_additional_eol_var = tk.BooleanVar()
+remove_additional_eol_checkbutton = create_checkbutton_widget(widgets_entry, 3, 1, 'Remove Additional EOL', remove_additional_eol_var)
+add_record_id_var = tk.BooleanVar()
+add_record_id_checkbutton = create_checkbutton_widget(widgets_entry, 4, 1, 'Add Record ID', add_record_id_var)
+flatten_file_var = tk.BooleanVar()
+flatten_file_checkbutton = create_checkbutton_widget(widgets_entry, 6, 1, 'Flatten File', flatten_file_var)
+add_sequence_var = tk.BooleanVar()
+add_sequence_checkbutton = create_checkbutton_widget(widgets_entry, 7, 1, 'Add Sequence', add_sequence_var)
+fill_with_blank_lines_var = tk.BooleanVar()
+fill_with_blank_lines_checkbutton = create_checkbutton_widget(widgets_entry, 8, 1, 'Fill With Blank Lines', fill_with_blank_lines_var)
+delimit_fixed_width_var = tk.BooleanVar()
+delimit_fixed_width_checkbutton = create_checkbutton_widget(widgets_entry, 11, 1, 'Delimit Fixed Width', delimit_fixed_width_var)
+filter_records_var = tk.BooleanVar()
+filter_records_checkbutton = create_checkbutton_widget(widgets_entry, 14, 1, 'Filter Records', filter_records_var)
+inverted_filter_var = tk.BooleanVar()
+inverted_filter_checkbutton = create_checkbutton_widget(widgets_entry, 15, 1, 'Inverted Filter', inverted_filter_var)
+escapeQuotes_var = tk.BooleanVar()
+escapeQuotes_checkbutton = create_checkbutton_widget(widgets_entry, 7, 2, 'Escape Quotes', escapeQuotes_var)
+insertFileControl_var = tk.BooleanVar()
+insertFileControl_checkbutton = create_checkbutton_widget(widgets_entry, 8, 2, 'Insert File Control', insertFileControl_var)
+deleteSourceFile_var = tk.BooleanVar()
+deleteSourceFile_checkbutton = create_checkbutton_widget(widgets_entry, 11, 2, 'Delete Source File', deleteSourceFile_var)
+json_scrapping_needed_var = tk.BooleanVar()
+json_scrapping_needed_checkbutton = create_checkbutton_widget(widgets_entry, 1, 2, 'JSON Scrapping Needed', json_scrapping_needed_var)
+add_column_delimiter_var = tk.BooleanVar()
+add_column_delimiter_checkbutton = create_checkbutton_widget(widgets_entry, 3, 2, 'Add Column Delimiter', add_column_delimiter_var)
+flag_entry_var = tk.BooleanVar()
+flag_checkbutton = create_checkbutton_widget(widgets_entry, 5, 3, 'Deleteable File', flag_entry_var)
+
+# Create spinbox and combobox widgets
+date_position_entry = create_spinbox_widget(widgets_entry, 5, 0, 1, 100, 5, 'Enter Date Position')
+num_quarters_entry = create_spinbox_widget(widgets_entry, 10, 0, 1, 100, 5, 'Enter Number of Quarters')
+num_header_lines_entry = create_spinbox_widget(widgets_entry, 16, 0, 1, 100, 5, 'Enter Number of Header Lines')
+num_trailer_lines_entry = create_spinbox_widget(widgets_entry, 0, 1, 1, 100, 5, 'Enter Number of Trailer Lines')
+column_number_entry = create_spinbox_widget(widgets_entry, 16, 1, 1, 100, 5, 'Enter Column Number')
+
+file_type_list = ['Fixed_Width', 'CSV', 'Pipe_Delimited', 'JSON', 'SQL']
+file_type_combobox = create_combobox_widget(widgets_entry, 7, 0, file_type_list, 5, 0)
+complexity_list = ['Low', 'Medium', 'High']
+complexity_combobox = create_combobox_widget(widgets_entry, 2, 3, complexity_list, 5, 0)
+
 
 #Insert button widget
-insert_button = ttk.Button(widgets_entry, text='Insert', command = insertRow)
-insert_button.grid(column=0, row=4,padx = 5, pady = 5, sticky='ew')
+insert_button = ttk.Button(frame, text='Insert', command = insertRow)
+insert_button.grid(column=0, row=1,padx = 5, pady = 5, sticky='ew')
 
 # Create the delete button widget
-delete_button = ttk.Button(widgets_entry, text='Delete', command=deleteRow)
-delete_button.grid(column=0, row=5, padx=5, pady=5, sticky='ew')
+delete_button = ttk.Button(frame, text='Delete', command=deleteRow)
+delete_button.grid(column=0, row=2, padx=5, pady=5, sticky='ew')
 
 # Create the edit button widget
-edit_button = ttk.Button(widgets_entry, text="Edit", command=editRow)
-edit_button.grid(column=0, row=6, padx=5, pady=5, sticky="ew")
+edit_button = ttk.Button(frame, text="Edit", command=editRow)
+edit_button.grid(column=0, row=3, padx=5, pady=5, sticky="ew")
 
 # Copy button widget
-copy_button = ttk.Button(widgets_entry, text="Copy", command=copyRow)
-copy_button.grid(column=0, row=7, padx=5, pady=5, sticky="ew")
-
-# Create the check logs button widget
-check_logs_button = ttk.Button(frame, text="Check Logs", command=openLogWindow)
-check_logs_button.grid(column=1, row=2, padx=5, pady=5)
-
-# Create a Text widget for history log
-history_log = tk.Text(frame, height=10, width=50)
-history_log.grid(column=0, row=6, columnspan=2, padx=20, pady=10, sticky="nsew")
-
-#Separator
-separator = ttk.Separator(widgets_entry, orient='horizontal')
-separator.grid(column=0, row=8, padx=10, pady=15, sticky='nsew')
-
-# Search button widget
-search_button = ttk.Button(widgets_entry, text='Search', command=searchData)
-search_button.grid(column=0, row=10, padx=5, pady=5, sticky='ew')
-
-# Search entry widget
-search_entry = ttk.Entry(widgets_entry, width=20)
-search_entry.grid(column=0, row=9, padx=5, pady=5, sticky='ew')
-
+copy_button = ttk.Button(frame, text="Copy", command=copyRow)
+copy_button.grid(column=0, row=4, padx=5, pady=5, sticky="ew")
 
 #Frame for Treeview on right side of GUI
 tree_frame = ttk.LabelFrame(frame, text='Data Tree')
-tree_frame.grid(column=1, row=0, padx= 10, pady=10, sticky='nsew')
+tree_frame.grid(column=1, row=0, padx=10, pady=10, sticky='nsew')
 
 # Scrollbar
 tree_scroll_x = ttk.Scrollbar(tree_frame, orient="horizontal")
@@ -369,12 +487,7 @@ tree_scroll_y = ttk.Scrollbar(tree_frame)
 tree_scroll_x.pack(side="bottom", fill="x")
 tree_scroll_y.pack(side="right", fill="y")
 
-# Canvas for horizontal scrollbar
-tree_canvas = tk.Canvas(tree_frame, bd=0, xscrollcommand=tree_scroll_x.set)
-tree_canvas.pack(side="left", fill="both", expand=True)
 
-tree_scroll_x.config(command=tree_canvas.xview)
-tree_scroll_y.config(command=tree_canvas.yview)
 
 # Treeview
 cols = (
@@ -435,15 +548,16 @@ cols = (
     "Priority",
     "Notes",
 )
-treeview = ttk.Treeview(tree_canvas, columns=cols, show="headings", height=35, yscrollcommand=tree_scroll_y.set)
+treeview = ttk.Treeview(tree_frame, columns=cols, show="headings", height=20, yscrollcommand=tree_scroll_y.set, xscrollcommand=tree_scroll_x.set)
+for col in cols:
+    treeview.heading(col, text=col)
+    treeview.column(col, width=15, anchor='center')
 
 treeview.pack()
 
-# Configure column widths
-for col in cols:
-    treeview.column(col, width=100)
 
 tree_scroll_y.config(command=treeview.yview)
+tree_scroll_x.config(command=treeview.xview)
 
 # Load data into Treeview
 loadData()
