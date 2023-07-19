@@ -2,8 +2,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import datetime
 import csv
+from tkinter import tix
 import openpyxl
-import pandas as pd
 
 
 #Need to add
@@ -16,7 +16,7 @@ import pandas as pd
 #Create log file
 log_file = "history_log.txt" 
 username = ""  # Global variable to store the username
-path = "data.xlsx"
+path = "datafull.xlsx"
 
 def convertCSVtoExcel(csv_path, excel_path):
     # Read the CSV file into a pandas DataFrame
@@ -140,21 +140,6 @@ def insertRow():
     age = age_entry.get()
     status = status_combobox.get()
     employment = "Employed" if a.get() else "Unemployed"
-
-# Check if name or age is empty
-    if name == "":
-        messagebox.showerror("Error", "Name field cannot be empty.")
-        return
-    if age == "":
-        messagebox.showerror("Error", "Age field cannot be empty.")
-        return
-
-    # Check if age is a valid integer
-    try:
-        age = int(age)
-    except ValueError:
-        messagebox.showerror("Error", "Age must be a valid integer.")
-        return
 
     # Insert row into Excel Sheet
     try:
@@ -338,18 +323,36 @@ history_menu.add_command(label="View History", command=openLogWindow)
 root.tk.call('source', 'forest-dark.tcl')
 ttk.Style().theme_use('forest-dark')
 
-#Title and Frame
+#Main Frame
 frame = ttk.Frame(root, cursor = 'arrow')
 frame.pack()
 
+class Tooltip(tix.Balloon):
+    def __init__(self, widget, text):
+        super().__init__(widget)
+        self.bind_widget(widget)
+        self.message = text
+        
 #Widgets on left side of GUI
 widgets_entry = ttk.LabelFrame(frame, text='Insert Data Row')
 widgets_entry.grid(column=0, row=0, sticky='nsew', padx=10, pady=10)
 
 def create_entry_widget(parent, row, column, width, default_text):
+    def on_entry_focus_in(event):
+        if entry.get() == default_text:
+            entry.delete(0, tk.END)
+
+    def on_entry_focus_out(event):
+        if entry.get() == "":
+            entry.insert(0, default_text)
+
     entry = ttk.Entry(parent, width=width)
     entry.insert(0, default_text)
-    entry.bind('<FocusIn>', lambda event: entry.delete(0, 'end'))
+
+    # Bind focus in and focus out events to the Entry widget
+    entry.bind('<FocusIn>', on_entry_focus_in)
+    entry.bind('<FocusOut>', on_entry_focus_out)
+
     entry.grid(column=column, row=row, padx=5, pady=5, sticky='ew')
     return entry
 
@@ -551,9 +554,11 @@ cols = (
 treeview = ttk.Treeview(tree_frame, columns=cols, show="headings", height=20, yscrollcommand=tree_scroll_y.set, xscrollcommand=tree_scroll_x.set)
 for col in cols:
     treeview.heading(col, text=col)
-    treeview.column(col, width=15, anchor='center')
+    treeview.column(col, width=100, anchor='center')
 
-treeview.pack()
+
+
+treeview.pack(expand = True, fill = 'both')
 
 
 tree_scroll_y.config(command=treeview.yview)
@@ -561,6 +566,11 @@ tree_scroll_x.config(command=treeview.xview)
 
 # Load data into Treeview
 loadData()
+
+#Set the weight of rows and columns to make the treeview fit the window
+frame.columnconfigure(1, weight=1)
+frame.rowconfigure(0, weight=1)
+
 
 # Run GUI
 root.mainloop()
