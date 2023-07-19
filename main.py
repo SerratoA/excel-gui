@@ -267,7 +267,7 @@ def copyRow():
 
 def addHistoryEntry(entry):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_entry = f"{timestamp} - {username}: {entry}\n"
+    log_entry = f"\n{timestamp} - {username}: {entry}\n"
 
     with open(log_file, "a") as file:
         file.write(log_entry)
