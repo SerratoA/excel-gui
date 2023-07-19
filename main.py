@@ -4,6 +4,7 @@ import datetime
 import csv
 from tkinter import tix
 import openpyxl
+import pandas as pd
 
 
 #Need to add
@@ -481,7 +482,7 @@ copy_button.grid(column=0, row=4, padx=5, pady=5, sticky="ew")
 
 #Frame for Treeview on right side of GUI
 tree_frame = ttk.LabelFrame(frame, text='Data Tree')
-tree_frame.grid(column=1, row=0, padx=10, pady=10, sticky='nsew')
+tree_frame.grid(column=1, row=0, padx=15.245, pady=10, sticky='nsew')
 
 # Scrollbar
 tree_scroll_x = ttk.Scrollbar(tree_frame, orient="horizontal")
