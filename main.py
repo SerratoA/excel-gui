@@ -159,7 +159,7 @@ def insertRow():
 
     #Clear entry widgets
 
-    addHistoryEntry("Inserted row: " + str(row_values))
+    addHistoryEntry("\nInserted row: " + str(row_values))
 
     # Function to delete selected row from Excel Sheet and Treeview
 def deleteRow():
@@ -174,13 +174,13 @@ def deleteRow():
                 workbook = openpyxl.load_workbook(path)
                 sheet = workbook.active
                 row_index = int(treeview.index(selected_item))
-                addHistoryEntry("Deleted row: " + str(treeview.item(selected_item)['values']))
+                addHistoryEntry("\nDeleted row: " + str(treeview.item(selected_item)['values']))
                 sheet.delete_rows(row_index + 2)  # Adding 2 to compensate for header row and 0-based indexing
                 workbook.save(path)
 
                 # Delete row from Treeview
                 treeview.delete(selected_item)
-                addHistoryEntry("Deleted row: " + str(treeview.item(selected_item)['values']))
+                addHistoryEntry("\nDeleted row: " + str(treeview.item(selected_item)['values']))
 
     else:
         messagebox.showinfo("No Row Selected", "Please select a row to delete.")
@@ -228,7 +228,7 @@ def editRow():
 
                     edit_window.destroy()  # Close the edit window
                     # Add edit entry to history log
-                    addHistoryEntry("Edited row: " + str(item_values) + " -> " + str(new_values))
+                    addHistoryEntry("\nEdited row: " + str(item_values) + " -> " + str(new_values))
                 except Exception as e:
                     print(e)
             
@@ -354,16 +354,19 @@ gui_menu = tk.Menu(menubar, tearoff=False)
 history_menu = tk.Menu(menubar, tearoff=False)
 
 menubar.add_cascade(label="Menu", menu=gui_menu)
-menubar.add_cascade(label = "History", menu = history_menu)
+# menubar.add_cascade(label = "History", menu = history_menu)
 
 # Add search option to the search menu
 gui_menu.add_command(label="Search", command=performSearch)
+
+# history menu 
+gui_menu.add_command(label="View History", command=openLogWindow)
 #separator
 gui_menu.add_separator()
 
 gui_menu.add_command(label="Exit", command=exitApp)
 
-history_menu.add_command(label="View History", command=openLogWindow)
+# history_menu.add_command(label="View History", command=openLogWindow)
 
 
 #Style for Tkinter
