@@ -4,11 +4,11 @@ import datetime
 import openpyxl
 import pandas as pd
 
-#Need to add
-#Flag for delete
-#Multiple row selection for delete and edit
-#undo and redo?
-#Real time changes 
+#TODO: 
+#Robert: Think of better save methodology, undo feature for the save? undo
+#feature for the before save part? 
+
+#Angle, lets try to split the code into at least 5 files 
 
 
 #Create log file
