@@ -332,6 +332,20 @@ def openLogWindow():
         logs = file.read()
         log_text.insert(tk.END, logs)
 
+def aboutPage():
+    about_window = tk.Toplevel(root)
+    about_window.title("About")
+    about_window.geometry("300x200")
+    
+    about_label = tk.Label(about_window, text="Data Management Application", font=("Helvetica", 16))
+    about_label.pack(pady=20)
+
+    about_text = tk.Label(about_window, text="Created By Angel Serrato\nEdited by Chaeil Yun\n\nVersion 0.8.0")
+    about_text.pack()
+
+    ok_button = tk.Button(about_window, text="Close", command=about_window.destroy)
+    ok_button.pack(pady=10)
+
 def exitApp():
     root.quit()
 
@@ -355,6 +369,9 @@ history_menu = tk.Menu(menubar, tearoff=False)
 
 menubar.add_cascade(label="Menu", menu=gui_menu)
 # menubar.add_cascade(label = "History", menu = history_menu)
+
+# Add abouts section
+gui_menu.add_command(label="About", command=aboutPage)
 
 # Add search option to the search menu
 gui_menu.add_command(label="Search", command=performSearch)
