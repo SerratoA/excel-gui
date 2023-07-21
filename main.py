@@ -147,13 +147,21 @@ def insertRow():
         workbook = openpyxl.load_workbook(path)
         sheet = workbook.active
         sheet.append(row_values)
-        workbook.save(path)
+        
+        #workbook.save(path)
+        def saveChanges():      
+                workbook.save(path)
+                save_button.destroy()
 
+    # Save button
+        save_button = ttk.Button(frame, text="Save", command=saveChanges)
+        save_button.grid(column = 1, row = 1 , padx = 5, pady = 5, sticky = "ew")
     except Exception as e:
         messagebox.showerror("Error", str(e))
         return
 
 
+   
     #Insert row into Treeview
     treeview.insert("", "end", values=row_values)
 
@@ -176,8 +184,12 @@ def deleteRow():
                 row_index = int(treeview.index(selected_item))
                 addHistoryEntry("\nDeleted row: " + str(treeview.item(selected_item)['values']))
                 sheet.delete_rows(row_index + 2)  # Adding 2 to compensate for header row and 0-based indexing
-                workbook.save(path)
+                # def saveChanges():      
+                #     workbook.save(path)
+                #     save_button.destroy()
 
+                # save_button = ttk.Button(frame, text="Save", command=saveChanges)
+                # save_button.grid(column = 1, row = 1 , padx = 5, pady = 5, sticky = "ew")
                 # Delete row from Treeview
                 treeview.delete(selected_item)
                 addHistoryEntry("\nDeleted row: " + str(treeview.item(selected_item)['values']))
@@ -340,7 +352,7 @@ def aboutPage():
     about_label = tk.Label(about_window, text="Data Management Application", font=("Helvetica", 16))
     about_label.pack(pady=20)
 
-    about_text = tk.Label(about_window, text="Created By Angel Serrato\nEdited by Chaeil Yun\n\nVersion 0.8.0")
+    about_text = tk.Label(about_window, text="Created By:\n Angel Serrato and Chaeil Yun\n\n\nVersion 0.8.0")
     about_text.pack()
 
     ok_button = tk.Button(about_window, text="Close", command=about_window.destroy)
