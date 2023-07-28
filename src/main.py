@@ -123,25 +123,6 @@ def insertRow():
         value = entry_widget.get()
         row_values.append(value)
 
-    # Get values from checkbuttons in the specified order using the keys
-    for key in sorted(checkbutton_widgets.keys()):
-        checkbutton_var = checkbutton_widgets[key]
-        value = "Selected" if checkbutton_var.get() else "Not Selected"
-        row_values.append(value)
-
-    # Get values from comboboxes in the specified order using the keys
-    for key in sorted(combobox_widgets.keys()):
-        combobox = combobox_widgets[key]
-        value = combobox.get()
-        row_values.append(value)
-
-    # Get values from spinboxes in the specified order using the keys
-    for key in sorted(spinbox_widgets.keys()):
-        spinbox = spinbox_widgets[key]
-        value = spinbox.get()
-        row_values.append(value)
-
-
     # Insert row into Excel Sheet
     try:
         workbook = openpyxl.load_workbook(path)
@@ -233,7 +214,7 @@ def editRow():
                         #print(col_index)
                         sheet.cell(row=row_index + 2, column=col_index+1).value = value
 
-                    workbook.save(path)
+                    #workbook.save(path)
 
                     # Update the row in Treeview
                     treeview.item(selected_item, values=new_values)
@@ -259,40 +240,6 @@ def copyRow():
                 entry_widget = entry_widgets[key]
                 entry_widget.delete(0, tk.END)
                 entry_widget.insert(0, item_values[key - 1])
-
-            for key in checkbutton_widgets.keys():
-                checkbutton_var = checkbutton_widgets[key]
-                value = item_values[key - 1]
-                if value == "None":
-                    checkbutton_var.set(False)
-                else:
-                    checkbutton_var.set(value)
-
-            for key in combobox_widgets.keys():
-                combobox_widget = combobox_widgets[key]
-                value = item_values[key - 1]
-                if value == "Fixed Width":
-                    combobox_widget.current(0)
-                elif value == "CSV":
-                    combobox_widget.current(1)
-                elif value == "Pipe_Delimited":
-                    combobox_widget.current(2)
-                elif value == "JSON":
-                    combobox_widget.current(3)
-                elif value == "SQL":
-                    combobox_widget.current(4)
-                elif value == "Low":
-                    combobox_widget.current(0)
-                elif value == "Medium":
-                    combobox_widget.current(1)
-                elif value == "High":
-                    combobox_widget.current(2)
-
-            for key in spinbox_widgets.keys():
-                spinbox_widget = spinbox_widgets[key]
-                spinbox_widget.delete(0, tk.END)
-                spinbox_widget.insert(0, item_values[key-1])
-
         else:
             messagebox.showinfo("No Row Selected", "Please select a row to copy.")
     else:
@@ -312,22 +259,6 @@ def clear_all_widgets():
         entry_widget.delete(0, tk.END)
         entry_widget.insert(0, entry_widget.default_text)  
 
-    # Clear checkbutton widgets
-    for key in checkbutton_widgets.keys():
-        checkbutton_var = checkbutton_widgets[key]
-        checkbutton_var.set(False)
-
-    # Clear combobox widgets
-    for key in combobox_widgets.keys():
-        combobox_widget = combobox_widgets[key]
-        combobox_widget.current(0)
-
-    # Clear spinbox widgets
-    for key in spinbox_widgets.keys():
-        spinbox_widget = spinbox_widgets[key]
-        spinbox_widget.delete(0, tk.END)
-        spinbox_widget.insert(0, spinbox_widget.default_text)  
-        
 # Function to open the log window
 #maybe write to a file instead of a text box??
 def openLogWindow():
@@ -437,32 +368,6 @@ def create_checkbutton_widget(parent, row, column, text, variable):
     checkbutton.grid(column=column, row=row, padx=5, pady=5, sticky='ew')
     return checkbutton
 
-def create_spinbox_widget(parent, row, column, from_, to, width, default_text):
-    spinbox = ttk.Spinbox(parent, from_=from_, to=to, width=width)
-    spinbox.insert(0, default_text)
-    spinbox.default_text = default_text  # Store the default value as an attribute of the spinbox widget
-
-    def on_spinbox_focus_in(event):
-        if spinbox.get() == default_text:
-            spinbox.delete(0, tk.END)
-
-    def on_spinbox_focus_out(event):
-        if spinbox.get() == "":
-            spinbox.insert(0, default_text)
-
-    # Bind focus in and focus out events to the Spinbox widget
-    spinbox.bind('<FocusIn>', on_spinbox_focus_in)
-    spinbox.bind('<FocusOut>', on_spinbox_focus_out)
-
-    spinbox.grid(column=column, row=row, padx=5, pady=5, sticky='ew')
-    return spinbox
-
-# Function to create and configure a combobox widget
-def create_combobox_widget(parent, row, column, values, width, default_index):
-    combobox = ttk.Combobox(parent, values=values, state='readonly', width=width)
-    combobox.current(default_index)
-    combobox.grid(column=column, row=row, padx=5, pady=5, sticky='ew')
-    return combobox
 
 # Create entry widgets
 custodian_entry = create_entry_widget(widgets_entry, 0, 0, 5, 'Enter Custodian')
@@ -470,18 +375,25 @@ source_dest_entry = create_entry_widget(widgets_entry, 1, 0, 5, 'Enter Source De
 source_file_entry = create_entry_widget(widgets_entry, 2, 0, 5, 'Enter Source File')
 date_format_entry = create_entry_widget(widgets_entry, 3, 0, 5, 'Enter Date Format')
 header_delimiter_entry = create_entry_widget(widgets_entry, 4, 0, 5, 'Enter Header Delimiter')
+date_position_entry = create_entry_widget(widgets_entry, 5, 0, 15, 'Enter Date Position')
 additional_delimiter_entry = create_entry_widget(widgets_entry, 6, 0, 5, 'Enter Additional Header Delimiter')
+file_type_entry = create_entry_widget(widgets_entry, 7, 0, 15,  'Enter File Type')
 xls_sheet_name_entry = create_entry_widget(widgets_entry, 9, 0, 5, 'Enter XLS Sheet Name')
+num_quarters_entry = create_entry_widget(widgets_entry, 10, 0, 15, 'Enter Number of Quarters')
 zip_file_name_entry = create_entry_widget(widgets_entry, 12, 0, 5, 'Enter Zip File Name')
 filter_file_name_entry = create_entry_widget(widgets_entry, 13, 0, 5, 'Enter Filter File Name')
+num_header_lines_entry = create_entry_widget(widgets_entry, 16, 0, 15, 'Enter Number of Header Lines')
+num_trailer_lines_entry = create_entry_widget(widgets_entry, 0, 1, 15, 'Enter Number of Trailer Lines')
 start_string_entry = create_entry_widget(widgets_entry, 1, 1, 5, 'Enter Start String')
 first_record_identifier_entry = create_entry_widget(widgets_entry, 5, 1, 5, 'Enter First Record Identifier')
 strip_leading_characters_entry = create_entry_widget(widgets_entry, 9, 1, 5, 'Enter Strip Leading Characters')
 sequence_entry = create_entry_widget(widgets_entry, 10, 1, 5, 'Enter Sequence')
 config_file_entry = create_entry_widget(widgets_entry, 12, 1, 5, 'Enter Config File')
 delimiter_entry = create_entry_widget(widgets_entry, 13, 1, 5, 'Enter Delimiter')
+column_number_entry = create_entry_widget(widgets_entry, 16, 1, 15, 'Enter Column Number')
 filter_value_entry = create_entry_widget(widgets_entry, 0, 2, 5, 'Enter Filter Value')
 json_key_name_entry = create_entry_widget(widgets_entry, 2, 2, 5, 'Enter JSON KeyName')
+complexity_entry = create_entry_widget(widgets_entry, 2, 3, 15,  'Enter Complexity')
 newColumnDate_entry = create_entry_widget(widgets_entry, 4, 2, 5, 'New Column Date')
 newColumnIndex_entry = create_entry_widget(widgets_entry, 5, 2, 5, 'New Column Index')
 newColumnCount_entry = create_entry_widget(widgets_entry, 6, 2, 5, 'New Column Count')
@@ -497,56 +409,62 @@ storedProcedure_entry = create_entry_widget(widgets_entry, 1, 3, 5, 'Stored Proc
 priority_entry = create_entry_widget(widgets_entry, 3, 3, 5, 'Priority')
 notes_entry = create_entry_widget(widgets_entry, 4, 3, 5, 'Notes')
 
-# Create checkbutton widgets
-xls_to_csv_var = tk.BooleanVar()
-xls_to_csv_checkbutton = create_checkbutton_widget(widgets_entry, 8, 0, 'Convert XLS to CSV', xls_to_csv_var)
-unzip_file_var = tk.BooleanVar()
-unzip_file_checkbutton = create_checkbutton_widget(widgets_entry, 11, 0, 'Unzip File', unzip_file_var)
-combine_files_var = tk.BooleanVar()
-combine_files_checkbutton = create_checkbutton_widget(widgets_entry, 14, 0, 'Combine Files', combine_files_var)
-remove_header_trailer_var = tk.BooleanVar()
-remove_header_trailer_checkbutton = create_checkbutton_widget(widgets_entry, 15, 0, 'Remove Header and Trailer', remove_header_trailer_var)
-additional_eol_var = tk.BooleanVar()
-additional_eol_checkbutton = create_checkbutton_widget(widgets_entry, 2, 1, 'Additional EOL', additional_eol_var)
-remove_additional_eol_var = tk.BooleanVar()
-remove_additional_eol_checkbutton = create_checkbutton_widget(widgets_entry, 3, 1, 'Remove Additional EOL', remove_additional_eol_var)
-add_record_id_var = tk.BooleanVar()
-add_record_id_checkbutton = create_checkbutton_widget(widgets_entry, 4, 1, 'Add Record ID', add_record_id_var)
-flatten_file_var = tk.BooleanVar()
-flatten_file_checkbutton = create_checkbutton_widget(widgets_entry, 6, 1, 'Flatten File', flatten_file_var)
-add_sequence_var = tk.BooleanVar()
-add_sequence_checkbutton = create_checkbutton_widget(widgets_entry, 7, 1, 'Add Sequence', add_sequence_var)
-fill_with_blank_lines_var = tk.BooleanVar()
-fill_with_blank_lines_checkbutton = create_checkbutton_widget(widgets_entry, 8, 1, 'Fill With Blank Lines', fill_with_blank_lines_var)
-delimit_fixed_width_var = tk.BooleanVar()
-delimit_fixed_width_checkbutton = create_checkbutton_widget(widgets_entry, 11, 1, 'Delimit Fixed Width', delimit_fixed_width_var)
-filter_records_var = tk.BooleanVar()
-filter_records_checkbutton = create_checkbutton_widget(widgets_entry, 14, 1, 'Filter Records', filter_records_var)
-inverted_filter_var = tk.BooleanVar()
-inverted_filter_checkbutton = create_checkbutton_widget(widgets_entry, 15, 1, 'Inverted Filter', inverted_filter_var)
-json_scrapping_needed_var = tk.BooleanVar()
-json_scrapping_needed_checkbutton = create_checkbutton_widget(widgets_entry, 1, 2, 'JSON Scrapping Needed', json_scrapping_needed_var)
-add_column_delimiter_var = tk.BooleanVar()
-add_column_delimiter_checkbutton = create_checkbutton_widget(widgets_entry, 3, 2, 'Add Column Delimiter', add_column_delimiter_var)
-escapeQuotes_var = tk.BooleanVar()
-escapeQuotes_checkbutton = create_checkbutton_widget(widgets_entry, 7, 2, 'Escape Quotes', escapeQuotes_var)
-insertFileControl_var = tk.BooleanVar()
-insertFileControl_checkbutton = create_checkbutton_widget(widgets_entry, 8, 2, 'Insert File Control', insertFileControl_var)
-deleteSourceFile_var = tk.BooleanVar()
-deleteSourceFile_checkbutton = create_checkbutton_widget(widgets_entry, 11, 2, 'Delete Source File', deleteSourceFile_var)
+xls_to_csv_entry = create_entry_widget(widgets_entry, 8, 0, 20, 'Convert XLS to CSV')
+unzip_file_entry = create_entry_widget(widgets_entry, 11, 0, 20, 'Unzip File')
+combine_files_entry = create_entry_widget(widgets_entry, 14, 0, 20, 'Combine Files')
+remove_header_trailer_entry = create_entry_widget(widgets_entry, 15, 0, 20, 'Remove Header and Trailer')
+additional_eol_entry = create_entry_widget(widgets_entry, 2, 1, 20, 'Additional EOL')
+remove_additional_eol_entry = create_entry_widget(widgets_entry, 3, 1, 20, 'Remove Additional EOL')
+add_record_id_entry = create_entry_widget(widgets_entry, 4, 1, 20, 'Add Record ID')
+flatten_file_entry = create_entry_widget(widgets_entry, 6, 1, 20, 'Flatten File')
+add_sequence_entry = create_entry_widget(widgets_entry, 7, 1, 20, 'Add Sequence')
+fill_with_blank_lines_entry = create_entry_widget(widgets_entry, 8, 1, 20, 'Fill With Blank Lines')
+delimit_fixed_width_entry = create_entry_widget(widgets_entry, 11, 1, 20, 'Delimit Fixed Width')
+filter_records_entry = create_entry_widget(widgets_entry, 14, 1, 20, 'Filter Records')
+inverted_filter_entry = create_entry_widget(widgets_entry, 15, 1, 20, 'Inverted Filter')
+json_scrapping_needed_entry = create_entry_widget(widgets_entry, 1, 2, 20, 'JSON Scrapping Needed')
+add_column_delimiter_entry = create_entry_widget(widgets_entry, 3, 2, 20, 'Add Column Delimiter')
+escapeQuotes_entry = create_entry_widget(widgets_entry, 7, 2, 20, 'Escape Quotes')
+insertFileControl_entry = create_entry_widget(widgets_entry, 8, 2, 20, 'Insert File Control')
+deleteSourceFile_entry = create_entry_widget(widgets_entry, 11, 2, 20, 'Delete Source File')
 
-# Create spinbox and combobox widgets
-date_position_entry = create_spinbox_widget(widgets_entry, 5, 0, 1, 100, 5, 'Enter Date Position')
-num_quarters_entry = create_spinbox_widget(widgets_entry, 10, 0, 1, 100, 5, 'Enter Number of Quarters')
-num_header_lines_entry = create_spinbox_widget(widgets_entry, 16, 0, 1, 100, 5, 'Enter Number of Header Lines')
-num_trailer_lines_entry = create_spinbox_widget(widgets_entry, 0, 1, 1, 100, 5, 'Enter Number of Trailer Lines')
-column_number_entry = create_spinbox_widget(widgets_entry, 16, 1, 1, 100, 5, 'Enter Column Number')
-
-file_type_list = ['Fixed_Width', 'CSV', 'Pipe_Delimited', 'JSON', 'SQL']
-file_type_combobox = create_combobox_widget(widgets_entry, 7, 0, file_type_list, 5, 0)
-complexity_list = ['Low', 'Medium', 'High']
-complexity_combobox = create_combobox_widget(widgets_entry, 2, 3, complexity_list, 5, 0)
-
+# # Create checkbutton widgets
+# xls_to_csv_var = tk.BooleanVar()
+# xls_to_csv_checkbutton = create_checkbutton_widget(widgets_entry, 8, 0, 'Convert XLS to CSV', xls_to_csv_var)
+# unzip_file_var = tk.BooleanVar()
+# unzip_file_checkbutton = create_checkbutton_widget(widgets_entry, 11, 0, 'Unzip File', unzip_file_var)
+# combine_files_var = tk.BooleanVar()
+# combine_files_checkbutton = create_checkbutton_widget(widgets_entry, 14, 0, 'Combine Files', combine_files_var)
+# remove_header_trailer_var = tk.BooleanVar()
+# remove_header_trailer_checkbutton = create_checkbutton_widget(widgets_entry, 15, 0, 'Remove Header and Trailer', remove_header_trailer_var)
+# additional_eol_var = tk.BooleanVar()
+# additional_eol_checkbutton = create_checkbutton_widget(widgets_entry, 2, 1, 'Additional EOL', additional_eol_var)
+# remove_additional_eol_var = tk.BooleanVar()
+# remove_additional_eol_checkbutton = create_checkbutton_widget(widgets_entry, 3, 1, 'Remove Additional EOL', remove_additional_eol_var)
+# add_record_id_var = tk.BooleanVar()
+# add_record_id_checkbutton = create_checkbutton_widget(widgets_entry, 4, 1, 'Add Record ID', add_record_id_var)
+# flatten_file_var = tk.BooleanVar()
+# flatten_file_checkbutton = create_checkbutton_widget(widgets_entry, 6, 1, 'Flatten File', flatten_file_var)
+# add_sequence_var = tk.BooleanVar()
+# add_sequence_checkbutton = create_checkbutton_widget(widgets_entry, 7, 1, 'Add Sequence', add_sequence_var)
+# fill_with_blank_lines_var = tk.BooleanVar()
+# fill_with_blank_lines_checkbutton = create_checkbutton_widget(widgets_entry, 8, 1, 'Fill With Blank Lines', fill_with_blank_lines_var)
+# delimit_fixed_width_var = tk.BooleanVar()
+# delimit_fixed_width_checkbutton = create_checkbutton_widget(widgets_entry, 11, 1, 'Delimit Fixed Width', delimit_fixed_width_var)
+# filter_records_var = tk.BooleanVar()
+# filter_records_checkbutton = create_checkbutton_widget(widgets_entry, 14, 1, 'Filter Records', filter_records_var)
+# inverted_filter_var = tk.BooleanVar()
+# inverted_filter_checkbutton = create_checkbutton_widget(widgets_entry, 15, 1, 'Inverted Filter', inverted_filter_var)
+# json_scrapping_needed_var = tk.BooleanVar()
+# json_scrapping_needed_checkbutton = create_checkbutton_widget(widgets_entry, 1, 2, 'JSON Scrapping Needed', json_scrapping_needed_var)
+# add_column_delimiter_var = tk.BooleanVar()
+# add_column_delimiter_checkbutton = create_checkbutton_widget(widgets_entry, 3, 2, 'Add Column Delimiter', add_column_delimiter_var)
+# escapeQuotes_var = tk.BooleanVar()
+# escapeQuotes_checkbutton = create_checkbutton_widget(widgets_entry, 7, 2, 'Escape Quotes', escapeQuotes_var)
+# insertFileControl_var = tk.BooleanVar()
+# insertFileControl_checkbutton = create_checkbutton_widget(widgets_entry, 8, 2, 'Insert File Control', insertFileControl_var)
+# deleteSourceFile_var = tk.BooleanVar()
+# deleteSourceFile_checkbutton = create_checkbutton_widget(widgets_entry, 11, 2, 'Delete Source File', deleteSourceFile_var)
 
 #Insert button widget
 insert_button = ttk.Button(frame, text='Insert', command = insertRow)
@@ -650,23 +568,47 @@ entry_widgets = {
     3: source_file_entry,
     4: date_format_entry,
     5: header_delimiter_entry,
+    6: date_position_entry,
     7: additional_delimiter_entry,
+    8: file_type_entry,
+    9: xls_to_csv_entry,
     10: xls_sheet_name_entry,
+    11: num_quarters_entry,
+    12: unzip_file_entry,
     13: zip_file_name_entry,
     14: filter_file_name_entry,
+    15: combine_files_entry,
+    16: remove_header_trailer_entry,
+    17: num_header_lines_entry,
+    18: num_trailer_lines_entry,
     19: start_string_entry,
+    20: additional_eol_entry,
+    21: remove_additional_eol_entry,
+    22: add_record_id_entry,
     23: first_record_identifier_entry,
+    24: flatten_file_entry,
+    25: add_sequence_entry,
+    26: fill_with_blank_lines_entry,
     27: strip_leading_characters_entry,
     28: sequence_entry,
+    29: delimit_fixed_width_entry,
     30: config_file_entry,
     31: delimiter_entry,
+    32: filter_records_entry,
+    33: inverted_filter_entry,
+    34: column_number_entry,
     35: filter_value_entry,
+    36: json_scrapping_needed_entry,
     37: json_key_name_entry,
+    38: add_column_delimiter_entry,   
     39: newColumnDate_entry,
     40: newColumnIndex_entry,
     41: newColumnCount_entry,
+    42: escapeQuotes_entry,
+    43: insertFileControl_entry,
     44: fileLabel_entry,
     45: server_entry,
+    46: deleteSourceFile_entry,
     47: snowflakeAccount_entry,
     48: snowflakeAuthenticator_entry,
     49: snowflakeWarehouse_entry,
@@ -674,49 +616,37 @@ entry_widgets = {
     51: snowflakeSchema_entry,
     52: snowflakeFileFormat_entry,
     53: storedProcedure_entry,
+    54: complexity_entry,
     55: priority_entry,
     56: notes_entry,
 }
 
-checkbutton_widgets = {
-    9: xls_to_csv_var,
-    12: unzip_file_var,
-    15: combine_files_var,
-    16: remove_header_trailer_var,
-    20: additional_eol_var,
-    21: remove_additional_eol_var,
-    22: add_record_id_var,
-    24: flatten_file_var,
-    25: add_sequence_var,
-    26: fill_with_blank_lines_var,
-    29: delimit_fixed_width_var,
-    32: filter_records_var,
-    33: inverted_filter_var,
-    36: json_scrapping_needed_var,
-    38: add_column_delimiter_var,
-    42: escapeQuotes_var,
-    43: insertFileControl_var,
-    46: deleteSourceFile_var,
-}
+# checkbutton_widgets = {
+#     9: xls_to_csv_var,
+#     12: unzip_file_var,
+#     15: combine_files_var,
+#     16: remove_header_trailer_var,
+#     20: additional_eol_var,
+#     21: remove_additional_eol_var,
+#     22: add_record_id_var,
+#     24: flatten_file_var,
+#     25: add_sequence_var,
+#     26: fill_with_blank_lines_var,
+#     29: delimit_fixed_width_var,
+#     32: filter_records_var,
+#     33: inverted_filter_var,
+#     36: json_scrapping_needed_var,
+#     38: add_column_delimiter_var,
+#     42: escapeQuotes_var,
+#     43: insertFileControl_var,
+#     46: deleteSourceFile_var,
+# }
 
-combobox_widgets = {
-    8: file_type_combobox,
-    54: complexity_combobox,
-}
-
-spinbox_widgets = {
-    6: date_position_entry,
-    11: num_quarters_entry,
-    17: num_header_lines_entry,
-    18: num_trailer_lines_entry,
-    34: column_number_entry,
-}
 
 treeview = ttk.Treeview(tree_frame, columns=cols, show="headings", height=40, yscrollcommand=tree_scroll_y.set, xscrollcommand=tree_scroll_x.set)
 for col in cols:
     treeview.heading(col, text=col)
     treeview.column(col, width=100, anchor='center')
-
 
 
 treeview.pack(expand = True, fill = 'both')
