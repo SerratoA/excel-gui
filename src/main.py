@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox, simpledialog
 import datetime
 import openpyxl
 import pandas as pd
+import json
 
 #TODO: 
 #Robert: Think of better save methodology, undo feature for the save? undo
@@ -51,7 +52,7 @@ def loadData():
     treeview.delete(*treeview.get_children())
     
     list_values = list(sheet.values)
-    print(list_values)
+#    print(list_values)
         
     # Insert the data rows into the Treeview
     for row in list_values[1:]:
@@ -66,7 +67,7 @@ def showSearchResults(results):
     search_treeview.pack()
 
     # Configure the Treeview columns
-    columns = ["Name", "Age", "Subscription", "Employment"]
+    columns = ["Custodian", "Source_Destination_Table", "Source_File", "Date_Format"]
     search_treeview["columns"] = columns
     search_treeview["show"] = "headings"
     for col in columns:
@@ -77,9 +78,8 @@ def showSearchResults(results):
     for result in results:
         search_treeview.insert("", "end", values=result)
 
-
     # Add a "Copy" button
-    copy_button = ttk.Button(search_window, text="Copy", command=copyRow())
+    copy_button = ttk.Button(search_window, text="Copy", command=copyRow)
     copy_button.pack()
 
 def performSearch():
@@ -130,19 +130,10 @@ def insertRow():
         sheet.append(row_values)
         
         #workbook.save(path)
-        def saveChanges():      
-                workbook.save(path)
-                save_button.destroy()
-
-    # Save button
-        save_button = ttk.Button(frame, text="Save", command=saveChanges)
-        save_button.grid(column = 1, row = 1 , padx = 5, pady = 5, sticky = "ew")
     except Exception as e:
         messagebox.showerror("Error", str(e))
         return
 
-
-   
     #Insert row into Treeview
     treeview.insert("", "end", values=row_values)
 
@@ -178,55 +169,74 @@ def deleteRow():
     else:
         messagebox.showinfo("No Row Selected", "Please select a row to delete.")
 
-
+def saveChanges():
+    workbook = openpyxl.load_workbook(path)
+    workbook.save(path)
+    
 # Edit selected row in Excel Sheet and Treeview
 def editRow():
     selected_item = treeview.focus()
     if selected_item:
         item_values = treeview.item(selected_item, "values")
-            # Open a new window for editing the row
+        # Open a new window for editing the row
         edit_window = tk.Toplevel(root)
         edit_window.title("Edit Row")
         row_index = int(treeview.index(selected_item))
-            # Create labels and entry widgets for editing the row
-        labels = cols
+        
+        # Create labels and entry widgets for editing the row
+        labels = columns
         entries = []
+        
+        # Create a canvas with a scrollbar
+        canvas = tk.Canvas(edit_window, width=400, height=300)  # Set the size as needed
+        scrollbar = ttk.Scrollbar(edit_window, orient="vertical", command=canvas.yview)
+        canvas.config(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+
+        # Create a frame inside the canvas to hold the entry widgets
+        edit_frame = ttk.Frame(canvas)
+        canvas.create_window((0, 0), window=edit_frame, anchor="nw")
+
         for i, label in enumerate(labels):
-            ttk.Label(edit_window, text=label).grid(row=i, column=0, padx=5, pady=5, sticky="e")
-            entry = ttk.Entry(edit_window, width=20)
+            ttk.Label(edit_frame, text=label).grid(row=i, column=0, padx=5, pady=5, sticky="e")
+            entry = ttk.Entry(edit_frame, width=30)  # Adjust the width as needed
             entry.insert(0, item_values[i])
             entry.grid(row=i, column=1, padx=5, pady=5)
             entries.append(entry)
-            
-            # Save button to update the row in Excel Sheet and Treeview
-            def saveChanges():
-                new_values = [entry.get() for entry in entries]
-                try:
-                    workbook = openpyxl.load_workbook(path)
-                    sheet = workbook.active
 
-                    # Delete the old row
-                    sheet.delete_rows(row_index + 2)
+        # Configure the canvas scrolling
+        def on_canvas_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
 
-                    # Insert the updated row at the same position
-                    sheet.insert_rows(row_index + 2)
-                    for col_index, value in enumerate(new_values):
-                        #print(col_index)
-                        sheet.cell(row=row_index + 2, column=col_index+1).value = value
+        edit_frame.bind("<Configure>", on_canvas_configure)
 
-                    #workbook.save(path)
+        def on_mouse_wheel(event):
+            canvas.yview_scroll(-1 * int(event.delta / 120), "units")
 
-                    # Update the row in Treeview
-                    treeview.item(selected_item, values=new_values)
+        canvas.bind("<MouseWheel>", on_mouse_wheel)
+        # Save button to update the row in Excel Sheet and Treeview
+        def saveChanges():
+            new_values = [entry.get() for entry in entries]
+            try:
+                workbook = openpyxl.load_workbook(path)
+                sheet = workbook.active
+                # Delete the old row
+                sheet.delete_rows(row_index + 2)
+                # Insert the updated row at the same position
+                sheet.insert_rows(row_index + 2)
+                for col_index, value in enumerate(new_values):
+                    sheet.cell(row=row_index + 2, column=col_index + 1).value = value
+                # Update the row in Treeview
+                treeview.item(selected_item, values=new_values)
+                edit_window.destroy()  # Close the edit window
+                # Add edit entry to history log
+                addHistoryEntry("\nEdited row: " + str(item_values) + " -> " + str(new_values))
+            except Exception as e:
+                print(e)
 
-                    edit_window.destroy()  # Close the edit window
-                    # Add edit entry to history log
-                    addHistoryEntry("\nEdited row: " + str(item_values) + " -> " + str(new_values))
-                except Exception as e:
-                    print(e)
-            
-            ttk.Button(edit_window, text="Save", command=saveChanges).grid(row=len(labels), column=0, columnspan=2, padx=5, pady=10)
-            
+        ttk.Button(edit_frame, text="Save", command=saveChanges).grid(row=len(labels)+1, columnspan=2, pady=10)
+
     else:
         messagebox.showinfo("No Row Selected", "Please select a row to edit.")
     
@@ -280,13 +290,13 @@ def aboutPage():
     about_window.title("About")
     about_window.geometry("300x200")
     
-    about_label = tk.Label(about_window, text="Data Management Application", font=("Helvetica", 16))
+    about_label = ttk.Label(about_window, text="Data Management Application", font=("Helvetica", 16))
     about_label.pack(pady=20)
 
-    about_text = tk.Label(about_window, text="Created By:\n Angel Serrato and Chaeil Yun\n\n\nVersion 0.8.0")
+    about_text = ttk.Label(about_window, text="Created By:\n Angel Serrato and Chaeil Yun\n\n\nVersion 0.8.0")
     about_text.pack()
 
-    ok_button = tk.Button(about_window, text="Close", command=about_window.destroy)
+    ok_button = ttk.Button(about_window, text="Close", command=about_window.destroy)
     ok_button.pack(pady=10)
 
 def exitApp():
@@ -299,7 +309,7 @@ def exitApp():
 
 #GUI Setup
 root = tk.Tk()
-root.geometry("1920x1080")
+root.geometry("1620x980")
 log_window = None
 getUsername()
 
@@ -337,9 +347,27 @@ ttk.Style().theme_use('forest-dark')
 frame = ttk.Frame(root, cursor = 'arrow')
 frame.pack()
 
+widgets_entry_canvas = tk.Canvas(frame, highlightthickness=0)
+widgets_entry_canvas.grid(column=0, row=0, sticky='nsew')
+
 #Widgets on left side of GUI
-widgets_entry = ttk.LabelFrame(frame, text='Insert Data Row')
-widgets_entry.grid(column=0, row=0, sticky='nsew', padx=10, pady=10)
+widgets_entry = ttk.LabelFrame(widgets_entry_canvas, text='Insert Data Row')
+widgets_entry_canvas.create_window((0, 0), window=widgets_entry, anchor='nw')
+
+# Create vertical scrollbar
+entry_scrollbar = ttk.Scrollbar(widgets_entry, orient="vertical", command=widgets_entry_canvas.yview)
+entry_scrollbar.grid(column=1, row=0, sticky='ns', rowspan=50)
+
+# Configure the canvas to use the scrollbar
+widgets_entry_canvas.configure(yscrollcommand=entry_scrollbar.set)
+widgets_entry.columnconfigure(0, weight=1)  # Adjust the column weight as needed
+
+# Function to update the canvas scroll region
+def update_canvas_scroll_region(event):
+    widgets_entry_canvas.configure(scrollregion=widgets_entry_canvas.bbox("all"))
+
+# Bind the canvas to update the scroll region when the window size changes
+widgets_entry.bind("<Configure>", update_canvas_scroll_region)
 
 def create_entry_widget(parent, row, column, width, default_text):
     def on_entry_focus_in(event):
@@ -361,110 +389,19 @@ def create_entry_widget(parent, row, column, width, default_text):
     entry.grid(column=column, row=row, padx=5, pady=5, sticky='ew')
     return entry
 
+with open('config.json', 'r') as config_file:
+    config_data = json.load(config_file)
 
-# Function to create and configure a checkbutton widget
-def create_checkbutton_widget(parent, row, column, text, variable):
-    checkbutton = ttk.Checkbutton(parent, text=text, variable=variable, onvalue=True, offvalue=False)
-    checkbutton.grid(column=column, row=row, padx=5, pady=5, sticky='ew')
-    return checkbutton
+columns = config_data['columns']
+default_values = config_data['default_values']
 
 
-# Create entry widgets
-custodian_entry = create_entry_widget(widgets_entry, 0, 0, 5, 'Enter Custodian')
-source_dest_entry = create_entry_widget(widgets_entry, 1, 0, 5, 'Enter Source Destination')
-source_file_entry = create_entry_widget(widgets_entry, 2, 0, 5, 'Enter Source File')
-date_format_entry = create_entry_widget(widgets_entry, 3, 0, 5, 'Enter Date Format')
-header_delimiter_entry = create_entry_widget(widgets_entry, 4, 0, 5, 'Enter Header Delimiter')
-date_position_entry = create_entry_widget(widgets_entry, 5, 0, 15, 'Enter Date Position')
-additional_delimiter_entry = create_entry_widget(widgets_entry, 6, 0, 5, 'Enter Additional Header Delimiter')
-file_type_entry = create_entry_widget(widgets_entry, 7, 0, 15,  'Enter File Type')
-xls_sheet_name_entry = create_entry_widget(widgets_entry, 9, 0, 5, 'Enter XLS Sheet Name')
-num_quarters_entry = create_entry_widget(widgets_entry, 10, 0, 15, 'Enter Number of Quarters')
-zip_file_name_entry = create_entry_widget(widgets_entry, 12, 0, 5, 'Enter Zip File Name')
-filter_file_name_entry = create_entry_widget(widgets_entry, 13, 0, 5, 'Enter Filter File Name')
-num_header_lines_entry = create_entry_widget(widgets_entry, 16, 0, 15, 'Enter Number of Header Lines')
-num_trailer_lines_entry = create_entry_widget(widgets_entry, 0, 1, 15, 'Enter Number of Trailer Lines')
-start_string_entry = create_entry_widget(widgets_entry, 1, 1, 5, 'Enter Start String')
-first_record_identifier_entry = create_entry_widget(widgets_entry, 5, 1, 5, 'Enter First Record Identifier')
-strip_leading_characters_entry = create_entry_widget(widgets_entry, 9, 1, 5, 'Enter Strip Leading Characters')
-sequence_entry = create_entry_widget(widgets_entry, 10, 1, 5, 'Enter Sequence')
-config_file_entry = create_entry_widget(widgets_entry, 12, 1, 5, 'Enter Config File')
-delimiter_entry = create_entry_widget(widgets_entry, 13, 1, 5, 'Enter Delimiter')
-column_number_entry = create_entry_widget(widgets_entry, 16, 1, 15, 'Enter Column Number')
-filter_value_entry = create_entry_widget(widgets_entry, 0, 2, 5, 'Enter Filter Value')
-json_key_name_entry = create_entry_widget(widgets_entry, 2, 2, 5, 'Enter JSON KeyName')
-complexity_entry = create_entry_widget(widgets_entry, 2, 3, 15,  'Enter Complexity')
-newColumnDate_entry = create_entry_widget(widgets_entry, 4, 2, 5, 'New Column Date')
-newColumnIndex_entry = create_entry_widget(widgets_entry, 5, 2, 5, 'New Column Index')
-newColumnCount_entry = create_entry_widget(widgets_entry, 6, 2, 5, 'New Column Count')
-fileLabel_entry = create_entry_widget(widgets_entry, 9, 2, 5, 'File Label')
-server_entry = create_entry_widget(widgets_entry, 10, 2, 5, 'Server')
-snowflakeAccount_entry = create_entry_widget(widgets_entry, 12, 2, 5, 'Snowflake Account')
-snowflakeAuthenticator_entry = create_entry_widget(widgets_entry, 13, 2, 5, 'Snowflake Authenticator')
-snowflakeWarehouse_entry = create_entry_widget(widgets_entry, 14, 2, 5, 'Snowflake Warehouse')
-snowflakeDatabase_entry = create_entry_widget(widgets_entry, 15, 2, 5, 'Snowflake Database')
-snowflakeSchema_entry = create_entry_widget(widgets_entry, 16, 2, 5, 'Snowflake Schema')
-snowflakeFileFormat_entry = create_entry_widget(widgets_entry, 0, 3, 5, 'Snowflake FileFormat')
-storedProcedure_entry = create_entry_widget(widgets_entry, 1, 3, 5, 'Stored Procedure')
-priority_entry = create_entry_widget(widgets_entry, 3, 3, 5, 'Priority')
-notes_entry = create_entry_widget(widgets_entry, 4, 3, 5, 'Notes')
+entry_widgets = {}
+for i, col in enumerate(columns):
+    entry_widget = create_entry_widget(widgets_entry, i, 0, 45, default_values.get(col, ''))
+    entry_widgets[i+1] = entry_widget
+  
 
-xls_to_csv_entry = create_entry_widget(widgets_entry, 8, 0, 20, 'Convert XLS to CSV')
-unzip_file_entry = create_entry_widget(widgets_entry, 11, 0, 20, 'Unzip File')
-combine_files_entry = create_entry_widget(widgets_entry, 14, 0, 20, 'Combine Files')
-remove_header_trailer_entry = create_entry_widget(widgets_entry, 15, 0, 20, 'Remove Header and Trailer')
-additional_eol_entry = create_entry_widget(widgets_entry, 2, 1, 20, 'Additional EOL')
-remove_additional_eol_entry = create_entry_widget(widgets_entry, 3, 1, 20, 'Remove Additional EOL')
-add_record_id_entry = create_entry_widget(widgets_entry, 4, 1, 20, 'Add Record ID')
-flatten_file_entry = create_entry_widget(widgets_entry, 6, 1, 20, 'Flatten File')
-add_sequence_entry = create_entry_widget(widgets_entry, 7, 1, 20, 'Add Sequence')
-fill_with_blank_lines_entry = create_entry_widget(widgets_entry, 8, 1, 20, 'Fill With Blank Lines')
-delimit_fixed_width_entry = create_entry_widget(widgets_entry, 11, 1, 20, 'Delimit Fixed Width')
-filter_records_entry = create_entry_widget(widgets_entry, 14, 1, 20, 'Filter Records')
-inverted_filter_entry = create_entry_widget(widgets_entry, 15, 1, 20, 'Inverted Filter')
-json_scrapping_needed_entry = create_entry_widget(widgets_entry, 1, 2, 20, 'JSON Scrapping Needed')
-add_column_delimiter_entry = create_entry_widget(widgets_entry, 3, 2, 20, 'Add Column Delimiter')
-escapeQuotes_entry = create_entry_widget(widgets_entry, 7, 2, 20, 'Escape Quotes')
-insertFileControl_entry = create_entry_widget(widgets_entry, 8, 2, 20, 'Insert File Control')
-deleteSourceFile_entry = create_entry_widget(widgets_entry, 11, 2, 20, 'Delete Source File')
-
-# # Create checkbutton widgets
-# xls_to_csv_var = tk.BooleanVar()
-# xls_to_csv_checkbutton = create_checkbutton_widget(widgets_entry, 8, 0, 'Convert XLS to CSV', xls_to_csv_var)
-# unzip_file_var = tk.BooleanVar()
-# unzip_file_checkbutton = create_checkbutton_widget(widgets_entry, 11, 0, 'Unzip File', unzip_file_var)
-# combine_files_var = tk.BooleanVar()
-# combine_files_checkbutton = create_checkbutton_widget(widgets_entry, 14, 0, 'Combine Files', combine_files_var)
-# remove_header_trailer_var = tk.BooleanVar()
-# remove_header_trailer_checkbutton = create_checkbutton_widget(widgets_entry, 15, 0, 'Remove Header and Trailer', remove_header_trailer_var)
-# additional_eol_var = tk.BooleanVar()
-# additional_eol_checkbutton = create_checkbutton_widget(widgets_entry, 2, 1, 'Additional EOL', additional_eol_var)
-# remove_additional_eol_var = tk.BooleanVar()
-# remove_additional_eol_checkbutton = create_checkbutton_widget(widgets_entry, 3, 1, 'Remove Additional EOL', remove_additional_eol_var)
-# add_record_id_var = tk.BooleanVar()
-# add_record_id_checkbutton = create_checkbutton_widget(widgets_entry, 4, 1, 'Add Record ID', add_record_id_var)
-# flatten_file_var = tk.BooleanVar()
-# flatten_file_checkbutton = create_checkbutton_widget(widgets_entry, 6, 1, 'Flatten File', flatten_file_var)
-# add_sequence_var = tk.BooleanVar()
-# add_sequence_checkbutton = create_checkbutton_widget(widgets_entry, 7, 1, 'Add Sequence', add_sequence_var)
-# fill_with_blank_lines_var = tk.BooleanVar()
-# fill_with_blank_lines_checkbutton = create_checkbutton_widget(widgets_entry, 8, 1, 'Fill With Blank Lines', fill_with_blank_lines_var)
-# delimit_fixed_width_var = tk.BooleanVar()
-# delimit_fixed_width_checkbutton = create_checkbutton_widget(widgets_entry, 11, 1, 'Delimit Fixed Width', delimit_fixed_width_var)
-# filter_records_var = tk.BooleanVar()
-# filter_records_checkbutton = create_checkbutton_widget(widgets_entry, 14, 1, 'Filter Records', filter_records_var)
-# inverted_filter_var = tk.BooleanVar()
-# inverted_filter_checkbutton = create_checkbutton_widget(widgets_entry, 15, 1, 'Inverted Filter', inverted_filter_var)
-# json_scrapping_needed_var = tk.BooleanVar()
-# json_scrapping_needed_checkbutton = create_checkbutton_widget(widgets_entry, 1, 2, 'JSON Scrapping Needed', json_scrapping_needed_var)
-# add_column_delimiter_var = tk.BooleanVar()
-# add_column_delimiter_checkbutton = create_checkbutton_widget(widgets_entry, 3, 2, 'Add Column Delimiter', add_column_delimiter_var)
-# escapeQuotes_var = tk.BooleanVar()
-# escapeQuotes_checkbutton = create_checkbutton_widget(widgets_entry, 7, 2, 'Escape Quotes', escapeQuotes_var)
-# insertFileControl_var = tk.BooleanVar()
-# insertFileControl_checkbutton = create_checkbutton_widget(widgets_entry, 8, 2, 'Insert File Control', insertFileControl_var)
-# deleteSourceFile_var = tk.BooleanVar()
-# deleteSourceFile_checkbutton = create_checkbutton_widget(widgets_entry, 11, 2, 'Delete Source File', deleteSourceFile_var)
 
 #Insert button widget
 insert_button = ttk.Button(frame, text='Insert', command = insertRow)
@@ -482,16 +419,17 @@ edit_button.grid(column=0, row=3, padx=5, pady=5, sticky="ew")
 copy_button = ttk.Button(frame, text="Copy", command=copyRow)
 copy_button.grid(column=0, row=4, padx=5, pady=5, sticky="ew")
 
+save_button = ttk.Button(frame, text="Save", command=saveChanges)
+save_button.grid(column = 0, row = 6 , padx = 5, pady = 5, sticky = "ew")
 
 
 # Create the "Clear All" button and place it in your GUI
 clear_all_button = ttk.Button(frame, text="Clear All", command=clear_all_widgets)
-clear_all_button.grid(column=0, row=5, padx=5, pady=5)  # Adjust the row and column values as needed
+clear_all_button.grid(column=0, row=5, padx=5, pady=5, sticky = "ew")  # Adjust the row and column values as needed
 
 #Frame for Treeview on right side of GUI
 tree_frame = ttk.LabelFrame(frame, text='Data Tree')
-tree_frame.grid(column=1, row=0, padx=15.245, pady=10, sticky='nsew')
-tree_frame.grid(column=1, row=0, padx=10, pady=10, sticky='nsew', columnspan=2)
+tree_frame.grid(column=1, row=0, padx=12, pady=10, sticky='nsew')
 
 # Scrollbar
 tree_scroll_x = ttk.Scrollbar(tree_frame, orient="horizontal")
@@ -500,151 +438,8 @@ tree_scroll_y = ttk.Scrollbar(tree_frame)
 tree_scroll_x.pack(side="bottom", fill="x")
 tree_scroll_y.pack(side="right", fill="y")
 
-
-
-# Treeview
-cols = (
-    "Custodian",
-    "src_Destination_Table",
-    "Source_File",
-    "Date_Format",
-    "Header_Delimiter",
-    "Date_Position_OR_Column",
-    "Additional_Delimiter",
-    "File_Type",
-    "XLS_to_CSV",
-    "XLS_Sheet_Name",
-    "Number_Of_Quarters",
-    "Unzip_File",
-    "Zip_File_Name",
-    "Filter_File_Name",
-    "Combine_Files",
-    "Remove_Header_Trailer",
-    "Num_Header_Lines",
-    "Num_Trailer_Lines",
-    "Start_String",
-    "Additional_EOL",
-    "Remove_Additional_EOL",
-    "Add_Record_ID",
-    "First_Record_Identifier",
-    "Flatten_File",
-    "Add_Sequence",
-    "Fill_With_Blank_Lines",
-    "Strip_Leading_Characters",
-    "Sequence",
-    "Delimit_Fixed_Width",
-    "Config_File",
-    "Delimiter",
-    "Filter_Records",
-    "Inverted_Filter",
-    "Column_Number",
-    "Filter_Value",
-    "JSON_Scrapping_Needed",
-    "JSON_KeyName",
-    "Add_Column_Delimiter",
-    "New_Column_Date",
-    "New_Column_Index",
-    "New_Column_Count",
-    "Escape_Quotes",
-    "Insert_File_Control",
-    "File_Label",
-    "Server",
-    "Delete_Source_File",
-    "Snowflake_Account",
-    "Snowflake_Authenticator",
-    "Snowflake_Warehouse",
-    "Snowflake_Database",
-    "Snowflake_Schema",
-    "Snowflake_FileFormat",
-    "Stored_Procedure",
-    "Complexity",
-    "Priority",
-    "Notes",
-)
-
-entry_widgets = {
-    1: custodian_entry,
-    2: source_dest_entry,
-    3: source_file_entry,
-    4: date_format_entry,
-    5: header_delimiter_entry,
-    6: date_position_entry,
-    7: additional_delimiter_entry,
-    8: file_type_entry,
-    9: xls_to_csv_entry,
-    10: xls_sheet_name_entry,
-    11: num_quarters_entry,
-    12: unzip_file_entry,
-    13: zip_file_name_entry,
-    14: filter_file_name_entry,
-    15: combine_files_entry,
-    16: remove_header_trailer_entry,
-    17: num_header_lines_entry,
-    18: num_trailer_lines_entry,
-    19: start_string_entry,
-    20: additional_eol_entry,
-    21: remove_additional_eol_entry,
-    22: add_record_id_entry,
-    23: first_record_identifier_entry,
-    24: flatten_file_entry,
-    25: add_sequence_entry,
-    26: fill_with_blank_lines_entry,
-    27: strip_leading_characters_entry,
-    28: sequence_entry,
-    29: delimit_fixed_width_entry,
-    30: config_file_entry,
-    31: delimiter_entry,
-    32: filter_records_entry,
-    33: inverted_filter_entry,
-    34: column_number_entry,
-    35: filter_value_entry,
-    36: json_scrapping_needed_entry,
-    37: json_key_name_entry,
-    38: add_column_delimiter_entry,   
-    39: newColumnDate_entry,
-    40: newColumnIndex_entry,
-    41: newColumnCount_entry,
-    42: escapeQuotes_entry,
-    43: insertFileControl_entry,
-    44: fileLabel_entry,
-    45: server_entry,
-    46: deleteSourceFile_entry,
-    47: snowflakeAccount_entry,
-    48: snowflakeAuthenticator_entry,
-    49: snowflakeWarehouse_entry,
-    50: snowflakeDatabase_entry,
-    51: snowflakeSchema_entry,
-    52: snowflakeFileFormat_entry,
-    53: storedProcedure_entry,
-    54: complexity_entry,
-    55: priority_entry,
-    56: notes_entry,
-}
-
-# checkbutton_widgets = {
-#     9: xls_to_csv_var,
-#     12: unzip_file_var,
-#     15: combine_files_var,
-#     16: remove_header_trailer_var,
-#     20: additional_eol_var,
-#     21: remove_additional_eol_var,
-#     22: add_record_id_var,
-#     24: flatten_file_var,
-#     25: add_sequence_var,
-#     26: fill_with_blank_lines_var,
-#     29: delimit_fixed_width_var,
-#     32: filter_records_var,
-#     33: inverted_filter_var,
-#     36: json_scrapping_needed_var,
-#     38: add_column_delimiter_var,
-#     42: escapeQuotes_var,
-#     43: insertFileControl_var,
-#     46: deleteSourceFile_var,
-# }
-
-
-treeview = ttk.Treeview(tree_frame, columns=cols, show="headings", height=40, yscrollcommand=tree_scroll_y.set, xscrollcommand=tree_scroll_x.set)
-for col in cols:
+treeview = ttk.Treeview(tree_frame, columns=columns, show="headings", height=40, yscrollcommand=tree_scroll_y.set, xscrollcommand=tree_scroll_x.set)
+for col in columns:
     treeview.heading(col, text=col)
     treeview.column(col, width=100, anchor='center')
 
