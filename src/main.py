@@ -427,9 +427,9 @@ save_button.grid(column = 0, row = 6 , padx = 5, pady = 5, sticky = "ew")
 clear_all_button = ttk.Button(frame, text="Clear All", command=clear_all_widgets)
 clear_all_button.grid(column=0, row=5, padx=5, pady=5, sticky = "ew")  # Adjust the row and column values as needed
 
-#Frame for Treeview on right side of GUI
+#Frame for Treeview on right side of GUI, spans 2 rows
 tree_frame = ttk.LabelFrame(frame, text='Data Tree')
-tree_frame.grid(column=1, row=0, padx=12, pady=10, sticky='nsew')
+tree_frame.grid(column=1, row=0, padx=12, pady=10, sticky='nsew', rowspan=8)
 
 # Scrollbar
 tree_scroll_x = ttk.Scrollbar(tree_frame, orient="horizontal")
