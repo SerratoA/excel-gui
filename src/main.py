@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import datetime
 import openpyxl
-import pandas as pd
 import json
 
 #TODO: 
@@ -16,23 +15,8 @@ log_file = "history_log.txt"
 username = ""  # Global variable to store the username
 path = "datafull.xlsx"
 
-def convertCSVtoExcel(csv_path, excel_path):
-    # Read the CSV file into a pandas DataFrame
-    df = pd.read_csv(csv_path)
-
-    # Write the DataFrame to an Excel file
-    df.to_excel(excel_path, index=False)
-
-csv_path = "data.csv"
-excel_path = "data.xlsx"
-
-
-def convertExceltoCSV(excel_path, csv_path):
-    # Read the Excel file into a pandas DataFrame
-    df = pd.read_excel(excel_path)
-
-    # Write the DataFrame to a CSV file
-    df.to_csv(csv_path, index=False)
+workbook = openpyxl.load_workbook(path)
+sheet = workbook.active
 
 def getUsername():
     global username
@@ -57,9 +41,11 @@ def loadData():
     for row in list_values[1:]:
         treeview.insert("", "end", values=row)
         
+#Save changes to Excel Sheet and display a message box
 def saveChanges():
-    workbook = openpyxl.load_workbook(path)
     workbook.save(path)
+    messagebox.showinfo("Success", "Your changes have been saved.")
+
 
 # Global variable to store the selected item in the search results Treeview
 selected_search_item = None
@@ -156,20 +142,13 @@ def insertRow():
 
     # Insert row into Excel Sheet
     try:
-        workbook = openpyxl.load_workbook(path)
-        sheet = workbook.active
         sheet.append(row_values)
-        
-        #workbook.save(path)
     except Exception as e:
         messagebox.showerror("Error", str(e))
         return
 
     #Insert row into Treeview
     treeview.insert("", "end", values=row_values)
-
-    #Clear entry widgets
-
     addHistoryEntry("\nInserted row: " + str(row_values))
 
     # Function to delete selected row from Excel Sheet and Treeview
@@ -182,17 +161,9 @@ def deleteRow():
             if item_values:
             # Delete row from Excel Sheet
 
-                workbook = openpyxl.load_workbook(path)
-                sheet = workbook.active
                 row_index = int(treeview.index(selected_item))
                 addHistoryEntry("\nDeleted row: " + str(treeview.item(selected_item)['values']))
-                sheet.delete_rows(row_index + 2)  # Adding 2 to compensate for header row and 0-based indexing
-                # def saveChanges():      
-                #     workbook.save(path)
-                #     save_button.destroy()
-
-                # save_button = ttk.Button(frame, text="Save", command=saveChanges)
-                # save_button.grid(column = 1, row = 1 , padx = 5, pady = 5, sticky = "ew")
+                sheet.delete_rows(row_index + 2)  # Adding 2 to compensate for header row and 0-based indexing   
                 # Delete row from Treeview
                 treeview.delete(selected_item)
                 addHistoryEntry("\nDeleted row: " + str(treeview.item(selected_item)['values']))
@@ -234,8 +205,8 @@ def editRow():
             entries.append(entry)
 
         # Configure the canvas scrolling region and scroll wheel binding
-        edit_frame.update_idletasks()  # Needed to make bbox info available.
-        bbox = canvas.bbox(tk.ALL)  # Get bounding box of canvas with Buttons.
+        edit_frame.update_idletasks()  
+        bbox = canvas.bbox(tk.ALL)  
         canvas.configure(scrollregion=bbox, width=400, height=300)
         # Bind the MouseWheel to the canvas for vertical scrolling
         canvas.bind_all("<MouseWheel>", lambda event: canvas.yview_scroll(int(-1 * (event.delta / 120)), "units"))
@@ -243,24 +214,18 @@ def editRow():
         
         # Save button to update the row in Excel Sheet and Treeview
         def saveChanges():
-            new_values = [entry.get() for entry in entries]
-            try:
-                workbook = openpyxl.load_workbook(path)
-                sheet = workbook.active
+                new_values = [entry.get() for entry in entries]
                 # Delete the old row
                 sheet.delete_rows(row_index + 2)
                 # Insert the updated row at the same position
                 sheet.insert_rows(row_index + 2)
                 for col_index, value in enumerate(new_values):
                     sheet.cell(row=row_index + 2, column=col_index + 1).value = value
-                workbook.save(path)
                 # Update the row in Treeview
                 treeview.item(selected_item, values=new_values)
                 edit_window.destroy()  # Close the edit window
                 # Add edit entry to history log
                 addHistoryEntry("\nEdited row: " + str(item_values) + " -> " + str(new_values))
-            except Exception as e:
-                print(e)
 
         ttk.Button(edit_window, text="Save", command=saveChanges).pack(padx=5, pady=5)
 
@@ -362,8 +327,6 @@ gui_menu.add_command(label="View History", command=openLogWindow)
 gui_menu.add_separator()
 
 gui_menu.add_command(label="Exit", command=exitApp)
-
-# history_menu.add_command(label="View History", command=openLogWindow)
 
 
 #Style for Tkinter
