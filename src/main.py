@@ -11,7 +11,6 @@ import json
 
 #Angle, lets try to split the code into at least 5 files 
 
-
 #Create log file
 log_file = "history_log.txt" 
 username = ""  # Global variable to store the username
@@ -58,7 +57,25 @@ def loadData():
     for row in list_values[1:]:
         treeview.insert("", "end", values=row)
         
+def saveChanges():
+    workbook = openpyxl.load_workbook(path)
+    workbook.save(path)
+
+# Global variable to store the selected item in the search results Treeview
+selected_search_item = None
+
+def highlightSelectedRow():
+    global selected_search_item_id
+    if selected_search_item_id is not None:
+        # Find the corresponding row in the main data Treeview and highlight it
+        for item_id in treeview.get_children():
+            if treeview.item(item_id, "values")[1] == selected_search_item_id:
+                treeview.selection_set(item_id)  # Highlight the row
+                treeview.see(item_id)  # Scroll to make the selection visible
+                break
+
 def showSearchResults(results):
+    global selected_search_item_id
     search_window = tk.Toplevel(root)
     search_window.title("Search Results")
 
@@ -79,8 +96,22 @@ def showSearchResults(results):
         search_treeview.insert("", "end", values=result)
 
     # Add a "Copy" button
-    copy_button = ttk.Button(search_window, text="Copy", command=copyRow)
-    copy_button.pack()
+    highlight_button = ttk.Button(search_window, text="Highlight", command=highlightSelectedRow)
+    highlight_button.pack()
+
+    def on_search_item_selected(event):
+        global selected_search_item_id
+        selected_item = search_treeview.selection()
+        if selected_item:
+            selected_search_item_id = search_treeview.item(selected_item, "values")[1]
+        else:
+            selected_search_item_id = None
+
+    search_treeview.bind("<<TreeviewSelect>>", on_search_item_selected)
+
+
+
+
 
 def performSearch():
     search_window = tk.Toplevel(root)
@@ -169,9 +200,6 @@ def deleteRow():
     else:
         messagebox.showinfo("No Row Selected", "Please select a row to delete.")
 
-def saveChanges():
-    workbook = openpyxl.load_workbook(path)
-    workbook.save(path)
     
 # Edit selected row in Excel Sheet and Treeview
 def editRow():
@@ -205,16 +233,14 @@ def editRow():
             entry.grid(row=i, column=1, padx=5, pady=5)
             entries.append(entry)
 
-        # Configure the canvas scrolling
-        def on_canvas_configure(event):
-            canvas.configure(scrollregion=canvas.bbox("all"))
+        # Configure the canvas scrolling region and scroll wheel binding
+        edit_frame.update_idletasks()  # Needed to make bbox info available.
+        bbox = canvas.bbox(tk.ALL)  # Get bounding box of canvas with Buttons.
+        canvas.configure(scrollregion=bbox, width=400, height=300)
+        # Bind the MouseWheel to the canvas for vertical scrolling
+        canvas.bind_all("<MouseWheel>", lambda event: canvas.yview_scroll(int(-1 * (event.delta / 120)), "units"))
 
-        edit_frame.bind("<Configure>", on_canvas_configure)
-
-        def on_mouse_wheel(event):
-            canvas.yview_scroll(-1 * int(event.delta / 120), "units")
-
-        canvas.bind("<MouseWheel>", on_mouse_wheel)
+        
         # Save button to update the row in Excel Sheet and Treeview
         def saveChanges():
             new_values = [entry.get() for entry in entries]
@@ -227,6 +253,7 @@ def editRow():
                 sheet.insert_rows(row_index + 2)
                 for col_index, value in enumerate(new_values):
                     sheet.cell(row=row_index + 2, column=col_index + 1).value = value
+                workbook.save(path)
                 # Update the row in Treeview
                 treeview.item(selected_item, values=new_values)
                 edit_window.destroy()  # Close the edit window
@@ -235,7 +262,7 @@ def editRow():
             except Exception as e:
                 print(e)
 
-        ttk.Button(edit_frame, text="Save", command=saveChanges).grid(row=len(labels)+1, columnspan=2, pady=10)
+        ttk.Button(edit_window, text="Save", command=saveChanges).pack(padx=5, pady=5)
 
     else:
         messagebox.showinfo("No Row Selected", "Please select a row to edit.")
@@ -350,24 +377,23 @@ frame.pack()
 widgets_entry_canvas = tk.Canvas(frame, highlightthickness=0)
 widgets_entry_canvas.grid(column=0, row=0, sticky='nsew')
 
-#Widgets on left side of GUI
+#Widgets labelframe inside canvas for the entry widgets with height and width of the canvas
 widgets_entry = ttk.LabelFrame(widgets_entry_canvas, text='Insert Data Row')
 widgets_entry_canvas.create_window((0, 0), window=widgets_entry, anchor='nw')
 
-# Create vertical scrollbar
-entry_scrollbar = ttk.Scrollbar(widgets_entry, orient="vertical", command=widgets_entry_canvas.yview)
-entry_scrollbar.grid(column=1, row=0, sticky='ns', rowspan=50)
-
-# Configure the canvas to use the scrollbar
+# Create vertical scrollbar for the canvas and attach it to the canvas 
+entry_scrollbar = ttk.Scrollbar(widgets_entry_canvas, orient='vertical', command=widgets_entry_canvas.yview)
+entry_scrollbar.pack(side='right', fill='y')
 widgets_entry_canvas.configure(yscrollcommand=entry_scrollbar.set)
-widgets_entry.columnconfigure(0, weight=1)  # Adjust the column weight as needed
 
-# Function to update the canvas scroll region
-def update_canvas_scroll_region(event):
-    widgets_entry_canvas.configure(scrollregion=widgets_entry_canvas.bbox("all"))
 
-# Bind the canvas to update the scroll region when the window size changes
-widgets_entry.bind("<Configure>", update_canvas_scroll_region)
+# Configure the canvas
+widgets_entry_canvas.configure(yscrollcommand=entry_scrollbar.set)
+widgets_entry_canvas.bind('<Configure>', lambda e: widgets_entry_canvas.configure(scrollregion=widgets_entry_canvas.bbox('all')))
+widgets_entry_canvas.bind_all('<MouseWheel>', lambda e: widgets_entry_canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
+
+
+
 
 def create_entry_widget(parent, row, column, width, default_text):
     def on_entry_focus_in(event):
@@ -404,28 +430,28 @@ for i, col in enumerate(columns):
 
 
 #Insert button widget
-insert_button = ttk.Button(frame, text='Insert', command = insertRow)
-insert_button.grid(column=0, row=1,padx = 5, pady = 5, sticky='ew')
+insert_button = ttk.Button(frame, text='Insert', command = insertRow, width = 45)
+insert_button.grid(column=0, row=1,padx = 5, pady = 5)
 
 # Create the delete button widget
-delete_button = ttk.Button(frame, text='Delete', command=deleteRow)
-delete_button.grid(column=0, row=2, padx=5, pady=5, sticky='ew')
+delete_button = ttk.Button(frame, text='Delete', command=deleteRow, width = 45)
+delete_button.grid(column=0, row=2, padx=5, pady=5)
 
 # Create the edit button widget
-edit_button = ttk.Button(frame, text="Edit", command=editRow)
-edit_button.grid(column=0, row=3, padx=5, pady=5, sticky="ew")
+edit_button = ttk.Button(frame, text="Edit", command=editRow, width = 45)
+edit_button.grid(column=0, row=3, padx=5, pady=5)
 
 # Copy button widget
-copy_button = ttk.Button(frame, text="Copy", command=copyRow)
-copy_button.grid(column=0, row=4, padx=5, pady=5, sticky="ew")
+copy_button = ttk.Button(frame, text="Copy", command=copyRow, width = 45)
+copy_button.grid(column=0, row=4, padx=5, pady=5)
 
-save_button = ttk.Button(frame, text="Save", command=saveChanges)
-save_button.grid(column = 0, row = 6 , padx = 5, pady = 5, sticky = "ew")
+save_button = ttk.Button(frame, text="Save", command=saveChanges, width = 45)
+save_button.grid(column = 0, row = 6 , padx = 5, pady = 5)
 
 
 # Create the "Clear All" button and place it in your GUI
-clear_all_button = ttk.Button(frame, text="Clear All", command=clear_all_widgets)
-clear_all_button.grid(column=0, row=5, padx=5, pady=5, sticky = "ew")  # Adjust the row and column values as needed
+clear_all_button = ttk.Button(frame, text="Clear All", command=clear_all_widgets, width = 45)
+clear_all_button.grid(column=0, row=5, padx=5, pady=5)  # Adjust the row and column values as needed
 
 #Frame for Treeview on right side of GUI, spans 2 rows
 tree_frame = ttk.LabelFrame(frame, text='Data Tree')
@@ -456,7 +482,6 @@ loadData()
 #Set the weight of rows and columns to make the treeview fit the window
 frame.columnconfigure(1, weight=1)
 frame.rowconfigure(0, weight=1)
-
 
 # Run GUI
 root.mainloop()
